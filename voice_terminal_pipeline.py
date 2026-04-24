@@ -92,26 +92,28 @@ You have FULL ACCESS to the Windows system via the windows-mcp tools.
 USER COMMAND: {text}
 
 AVAILABLE TOOLS (windows-mcp):
-- App: launch/close apps (app_name="chrome", "notepad", etc.)
+- App: launch/close apps (app_name="chrome", etc.)
 - PowerShell: run any command
 - Shortcut: keys like "ctrl+l", "enter", "win+r", "alt+tab"
 - Type: type text, press_enter=true
 - Click/Move/Scroll: UI interaction
 - Screenshot/Snapshot: see the screen/UI tree
-- FileSystem/Registry: file/reg ops
-- Clipboard/Process/Notification/Wait
+- FileSystem/Registry/Clipboard/Process/Wait
+
+RULES FOR NAVIGATION:
+1. NEVER type a URL or domain into a website's internal search bar.
+2. ALWAYS use Shortcut(keys="ctrl+l") first to focus the browser's address bar.
+3. Then Type(text="https://...", press_enter=true).
 
 WORKFLOW FOR BROWSER TASKS:
-1. PRIORITIZE EXISTING WINDOWS: If Chrome is already open (check Snapshot), do NOT launch a new one.
-2. If Chrome is not focused: App(action="launch", app_name="chrome") will focus the existing window.
-3. If Chrome is already focused: Directly use Shortcut(keys="ctrl+l") and Type the URL.
-4. To search: Type the search URL (e.g., https://google.com/search?q=...) directly into the address bar.
+1. Use Snapshot() to see if Chrome is already open.
+2. If open, focus it via App(action="launch", app_name="chrome") or just use it if already active.
+3. Use Shortcut(keys="ctrl+l") to navigate directly to the target site (github.com, x.com, etc.) or a search URL.
 
 HINTS:
-- "X" means x.com.
-- Use `Snapshot()` frequently to see if a browser is already on screen.
-- If multiple Chrome windows exist, use the most recent one.
-- Avoid App(action="launch") if the app is already visible; just use Shortcut/Click.
+- "X" is only for x.com (Twitter) tasks.
+- If the user says "GitHub", go to github.com.
+- Avoid multi-step search (navigating to google.com first) unless necessary; use direct URLs.
 
 Execute the user's request flawlessly and quickly.
 """
