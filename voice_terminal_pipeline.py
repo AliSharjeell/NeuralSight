@@ -329,9 +329,14 @@ class NeuralSightWindow(ctk.CTk):
         self.title("NeuralSight")
         self.overrideredirect(True)
         self.attributes("-topmost", True)
-        self.configure(fg_color="#09090B")
+        
+        # Transparent corners fix for Windows
+        # We set a unique color for the background and make it transparent
+        TRANS_COLOR = "#000001"
+        self.configure(fg_color=TRANS_COLOR)
+        self.wm_attributes("-transparentcolor", TRANS_COLOR)
 
-        # Transparency (85% opaque)
+        # Transparency (88% opaque for the pill itself)
         self.attributes("-alpha", 0.88)
 
         # Center-bottom placement (Initial)
