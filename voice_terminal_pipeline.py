@@ -85,42 +85,39 @@ PAUSE_AFTER_SPEECH = 2.0       # seconds of silence before we consider the promp
 PHRASE_TIME_LIMIT   = 15       # max seconds of speech to capture
 GRPC_HOST = "127.0.0.1"
 GRPC_PORT = 50051
-PROMPT_TEMPLATE = """You are a Windows desktop voice assistant. Execute the user's request using windows-mcp tools.
+PROMPT_TEMPLATE = """You are Josh, a high-speed Windows AI assistant. 
+You are being controlled via VOICE. Keep responses extremely brief (1 sentence max).
+You have FULL ACCESS to the Windows system via the windows-mcp tools.
 
-AVAILABLE TOOLS (use these by exact name):
-- App: launch/resize/switch apps (e.g. App with action="launch", app_name="chrome")
-- Click: click screen elements by loc=[x,y] or label="element_id"
-- Type: type text into focused element, supports clear=true, press_enter=true
-- Shortcut: press key combos (e.g. keys="ctrl+l", keys="win+r", keys="enter")
-- Screenshot: capture current screen state
-- Snapshot: get UI tree with interactive element labels
-- Scroll: scroll up/down/left/right by loc or label
-- Move: move mouse cursor to coordinates
-- PowerShell: run any PowerShell command
-- Wait: pause for N seconds
-- Clipboard: get/set clipboard content
-- Scrape: extract content from URLs
-- FileSystem: read/write/copy/move/delete/list files
-- Process: list/kill processes
-- Notification: send Windows toast notifications
-- Registry: get/set/delete/list registry keys
+USER COMMAND: {text}
+
+AVAILABLE TOOLS (windows-mcp):
+- App: launch/close apps (app_name="chrome", "notepad", etc.)
+- PowerShell: run any command (use this for complex tasks)
+- Shortcut: keys like "ctrl+l", "enter", "win+r"
+- Type: type text, press_enter=true
+- Click/Move/Scroll: UI interaction
+- Screenshot/Snapshot: see the screen/UI tree
+- FileSystem/Registry: file/reg ops
+- Clipboard: read/write clipboard
+- Process/Notification/Wait: system state
+- SystemInfo (via PowerShell): check CPU/RAM usage if requested
 
 WORKFLOW FOR BROWSER TASKS:
-1. App(action="launch", app_name="chrome") or App(action="launch", app_name="msedge")
-2. Wait(seconds=2) for browser to open
-3. Shortcut(keys="ctrl+l") to focus address bar
-4. Type(text="https://youtube.com", press_enter=true)
-5. Wait(seconds=2) for page to load
-6. Screenshot() or Snapshot() to see current state
-7. Use Click/Type to interact with page elements
+1. App(action="launch", app_name="chrome")
+2. Wait(seconds=2)
+3. Shortcut(keys="ctrl+l")
+4. Type(text="https://google.com/search?q=...", press_enter=true) or the specific site.
 
-RULES:
-1. ALWAYS use the tools above. NEVER say you cannot do something.
-2. Use Screenshot/Snapshot to verify each step succeeded.
-3. Work step by step. Be fast and efficient.
-4. For search: navigate to site, find search box via Snapshot labels, Click it, Type query.
+HINTS:
+- "X" means x.com (Twitter).
+- To search, directly navigate to a search URL for speed.
+- If an app is already open, use it instead of re-launching.
+- Always use the most efficient tool (e.g., Type with press_enter=true instead of Type then Click).
+- For system health, use PowerShell `Get-Process | Sort-Object CPU -Descending | Select-Object -First 5` etc.
 
-User request: {text}"""
+Execute the user's request flawlessly and quickly.
+"""
 DEBUG_MODE = True
 
 
@@ -429,6 +426,13 @@ class NeuralSightWindow(ctk.CTk):
         txt_color = "#FAFAFA" if state != "SLEEPING" else "#A1A1AA"
         self.state_label.configure(text_color=txt_color)
 
+        # Dynamic Width: expands if text is long
+        text_len = len(message)
+        base_w = 400
+        extra = max(0, (text_len - 30) * 8)
+        new_w = base_w + extra
+        self.pill.configure(width=new_w)
+
         if state not in ("LISTENING",):
             self._target_heights = [0.0] * self._num_bars
 
@@ -489,19 +493,31 @@ class NeuralSightWindow(ctk.CTk):
             h = max(3, int(ch * 0.85 * self._bar_heights[i]))
             x0 = start_x + i * (bar_w + gap)
             y0 = (ch - h) // 2
+            
+            # Gradient: center bars are brighter/different color
+            dist_from_center = abs(i - self._num_bars // 2) / (self._num_bars // 2 + 0.01)
+            if state == "LISTENING":
+                # Light blue to violet gradient
+                r = int(250 - 50 * dist_from_center)
+                g = int(250 - 100 * dist_from_center)
+                b = 255
+                cur_bar_color = f"#{r:02x}{g:02x}{b:02x}"
+            else:
+                cur_bar_color = glow if dist_from_center > 0.4 else "#FAFAFA"
+
             # Rounded bar via oval caps + rectangle body
-            r = min(bar_w // 2, 3)
+            r_rad = min(bar_w // 2, 3)
             self.waveform.create_rectangle(
-                x0, y0 + r, x0 + bar_w, y0 + h - r,
-                fill=bar_color, outline="", tags="bar"
+                x0, y0 + r_rad, x0 + bar_w, y0 + h - r_rad,
+                fill=cur_bar_color, outline="", tags="bar"
             )
             self.waveform.create_oval(
-                x0, y0, x0 + bar_w, y0 + 2 * r,
-                fill=bar_color, outline="", tags="bar"
+                x0, y0, x0 + bar_w, y0 + 2 * r_rad,
+                fill=cur_bar_color, outline="", tags="bar"
             )
             self.waveform.create_oval(
-                x0, y0 + h - 2 * r, x0 + bar_w, y0 + h,
-                fill=bar_color, outline="", tags="bar"
+                x0, y0 + h - 2 * r_rad, x0 + bar_w, y0 + h,
+                fill=cur_bar_color, outline="", tags="bar"
             )
 
         self.after(33, self._animate)   # ~30fps
@@ -630,6 +646,13 @@ class AudioPipeline:
         if DEBUG_MODE:
             print(msg)
         self.widget.log(msg)
+        # Persistent logging
+        try:
+            with open("neuralsight.log", "a", encoding="utf-8") as f:
+                ts = time.strftime("%Y-%m-%d %H:%M:%S")
+                f.write(f"[{ts}] {msg}\n")
+        except Exception:
+            pass
 
     # --------------------------------------------------------------------------
     # Main loop
@@ -702,55 +725,76 @@ class AudioPipeline:
         self._print("[EVENT] Wake word detected!")
         self._beep()
 
-        time.sleep(0.1)  # let mic buffer flush
+        while self.running:
+            time.sleep(0.1)  # let mic buffer flush
+            self.widget.set_state("LISTENING", "Speak your command...")
+            
+            audio = self._capture_command()
+            if audio is None:
+                self.widget.set_state("SLEEPING", "Say 'Josh' to wake...")
+                return
 
-        self.widget.set_state("LISTENING", "Speak your command...")
-        audio = self._capture_command()
-        if audio is None:
-            self.widget.set_state("SLEEPING", "Say 'Josh' to wake...")
-            return
+            self.widget.set_state("PROCESSING", "Transcribing...")
+            transcribed = self._transcribe(audio)
+            if not transcribed:
+                self.widget.set_state("ERROR", "Transcription failed")
+                time.sleep(2)
+                self.widget.set_state("SLEEPING", "Say 'Josh' to wake...")
+                return
 
-        self.widget.set_state("PROCESSING", "Transcribing...")
-        transcribed = self._transcribe(audio)
-        if not transcribed:
-            self.widget.set_state("ERROR", "Transcription failed")
-            time.sleep(2)
-            self.widget.set_state("SLEEPING", "Say 'Josh' to wake...")
-            return
+            self._print(f"[Heard] \"{transcribed}\"")
 
-        self._print(f"[Heard] \"{transcribed}\"")
+            cmd = PROMPT_TEMPLATE.format(text=transcribed)
+            self.widget.set_state("EXECUTING", "Running...")
 
-        cmd = PROMPT_TEMPLATE.format(text=transcribed)
-        self.widget.set_state("EXECUTING", "Running...")
+            # Clear done event before sending so we can wait for completion
+            _done_event.clear()
+            result = self.claude.send(cmd)
+            
+            if isinstance(result, tuple):
+                success, _ = result
+            else:
+                success = result
 
-        # Clear done event before sending so we can wait for completion
-        _done_event.clear()
-        result = self.claude.send(cmd)
-        if isinstance(result, tuple):
-            success, _ = result
-        else:
-            success = result
-
-        if success:
-            self._print(f"[CLI] Command sent. Waiting for response...")
-            # Wait for completion, but check for voice interrupt every 0.5s
-            self._wait_with_interrupt()
-        else:
-            self._print("[CLI] Send failed.")
+            if success:
+                self._print(f"[CLI] Command sent. Waiting for response...")
+                # Wait for completion, but check for voice interrupt
+                status = self._wait_with_interrupt()
+                
+                if status == "NEW_COMMAND":
+                    # Loop back to LISTENING immediately
+                    self._print("[Interrupt] Re-listening for new command...")
+                    continue
+                elif status == "CANCELLED":
+                    # Exit the wake loop
+                    break
+                else:
+                    # DONE naturally
+                    break
+            else:
+                self._print("[CLI] Send failed.")
+                break
 
         time.sleep(0.2)
         self.widget.set_state("SLEEPING", "Say 'Josh'...")
 
-    def _wait_with_interrupt(self) -> None:
-        """Wait for gRPC response, listening for 'Josh' to interrupt."""
+    def _wait_with_interrupt(self) -> str:
+        """
+        Wait for gRPC response, listening for 'Josh' to interrupt.
+        Returns:
+            "DONE": finished naturally
+            "CANCELLED": user said 'Josh stop'
+            "NEW_COMMAND": user said 'Josh' (new command follows)
+        """
         while not _done_event.is_set():
-            if _done_event.wait(timeout=0.5):
-                break  # Response finished naturally
+            if _done_event.wait(timeout=0.4):
+                return "DONE"
 
             # Quick listen for interrupt wake word
             try:
                 with self.microphone as source:
-                    audio = self.recognizer.listen(source, timeout=0.3, phrase_time_limit=1.5)
+                    # Very short listen to avoid blocking
+                    audio = self.recognizer.listen(source, timeout=0.2, phrase_time_limit=1.5)
                 text = self._quick_transcribe(audio)
                 if not text:
                     continue
@@ -765,29 +809,19 @@ class AudioPipeline:
                     _done_event.set()
                     self._print("[Interrupt] Cancelled current task.")
 
-                    # Check if it's "josh stop" or just "josh" (new command)
-                    if "stop" in text_lower or "cancel" in text_lower:
+                    # Check if it's "stop" or "cancel"
+                    if any(word in text_lower for word in ["stop", "cancel", "shut up", "quit"]):
                         self._print("[Interrupt] Stopped.")
-                        return
+                        return "CANCELLED"
 
-                    # Otherwise listen for new command
-                    time.sleep(0.1)
-                    self.widget.set_state("LISTENING", "New command...")
-                    audio = self._capture_command()
-                    if audio:
-                        self.widget.set_state("PROCESSING", "Transcribing...")
-                        new_cmd = self._transcribe(audio)
-                        if new_cmd:
-                            self._print(f"[Interrupt] New: \"{new_cmd}\"")
-                            cmd = PROMPT_TEMPLATE.format(text=new_cmd)
-                            self.widget.set_state("EXECUTING", "Running...")
-                            _done_event.clear()
-                            self.claude.send(cmd)
-                            continue  # Keep waiting for new response
-                    return
-            except (sr.WaitTimeoutError, Exception):
+                    # Otherwise, user wants to say a new command
+                    return "NEW_COMMAND"
+            except sr.WaitTimeoutError:
                 continue
-
+            except Exception as e:
+                self._print(f"[Interrupt] Error: {e}")
+                continue
+        return "DONE"
     # --------------------------------------------------------------------------
     # Command capture with live RMS waveform
     # --------------------------------------------------------------------------

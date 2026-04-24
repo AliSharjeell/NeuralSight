@@ -40,3 +40,7 @@ Thumbs.db
 *.wav
 *.pcm
 .neon/
+neuralsight.log
+**/.env
+**/.env.local
+**/.env.*

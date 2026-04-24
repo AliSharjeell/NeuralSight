@@ -1,0 +1,179 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1777037540098,
+  "projectRoot": "C:\\AppsNew\\NeuralSight",
+  "techStack": {
+    "languages": [],
+    "frameworks": [],
+    "packageManager": null,
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {},
+  "hotPaths": [
+    {
+      "path": "voice_terminal_pipeline.py",
+      "accessCount": 52,
+      "lastAccessed": 1777057922788,
+      "type": "file"
+    },
+    {
+      "path": "windows-mcp-client\\agent.py",
+      "accessCount": 22,
+      "lastAccessed": 1777049177821,
+      "type": "file"
+    },
+    {
+      "path": "windows-mcp-client\\smol_react.py",
+      "accessCount": 4,
+      "lastAccessed": 1777050058855,
+      "type": "file"
+    },
+    {
+      "path": "requirements.txt",
+      "accessCount": 4,
+      "lastAccessed": 1777055237818,
+      "type": "file"
+    },
+    {
+      "path": "windows-mcp-client\\requirements.txt",
+      "accessCount": 3,
+      "lastAccessed": 1777047674155,
+      "type": "file"
+    },
+    {
+      "path": "eyetrax_env\\Lib\\site-packages\\eyetrax\\cli.py",
+      "accessCount": 2,
+      "lastAccessed": 1777037966498,
+      "type": "file"
+    },
+    {
+      "path": "agent_s_repo\\setup.py",
+      "accessCount": 2,
+      "lastAccessed": 1777041505557,
+      "type": "file"
+    },
+    {
+      "path": "eyetrax_env\\Lib\\site-packages\\eyetrax\\app\\demo.py",
+      "accessCount": 1,
+      "lastAccessed": 1777037950930,
+      "type": "file"
+    },
+    {
+      "path": "webcam-eyetracker\\README.md",
+      "accessCount": 1,
+      "lastAccessed": 1777039269570,
+      "type": "file"
+    },
+    {
+      "path": "webcam-eyetracker\\PyOpenCV\\pygazetracker\\webcam.py",
+      "accessCount": 1,
+      "lastAccessed": 1777039287590,
+      "type": "file"
+    },
+    {
+      "path": "webcam-eyetracker\\PyGame\\camtracker.py",
+      "accessCount": 1,
+      "lastAccessed": 1777039287921,
+      "type": "file"
+    },
+    {
+      "path": "webcam-eyetracker\\PyOpenCV\\example.py",
+      "accessCount": 1,
+      "lastAccessed": 1777039295406,
+      "type": "file"
+    },
+    {
+      "path": "gaze_tracker.py",
+      "accessCount": 1,
+      "lastAccessed": 1777039862834,
+      "type": "file"
+    },
+    {
+      "path": "eviacam\\README",
+      "accessCount": 1,
+      "lastAccessed": 1777040313650,
+      "type": "file"
+    },
+    {
+      "path": "eviacam\\INSTALL",
+      "accessCount": 1,
+      "lastAccessed": 1777040327973,
+      "type": "file"
+    },
+    {
+      "path": "PrecisionGazeMouse\\PrecisionGazeMouse\\PrecisionGazeMouse.csproj",
+      "accessCount": 1,
+      "lastAccessed": 1777041012057,
+      "type": "file"
+    },
+    {
+      "path": "agent_s_repo\\requirements.txt",
+      "accessCount": 1,
+      "lastAccessed": 1777041327015,
+      "type": "file"
+    },
+    {
+      "path": "project-gameface\\README.md",
+      "accessCount": 1,
+      "lastAccessed": 1777041611791,
+      "type": "file"
+    },
+    {
+      "path": "project-gameface\\Windows\\requirements.txt",
+      "accessCount": 1,
+      "lastAccessed": 1777041628897,
+      "type": "file"
+    },
+    {
+      "path": "project-gameface\\Windows\\README.md",
+      "accessCount": 1,
+      "lastAccessed": 1777041628963,
+      "type": "file"
+    },
+    {
+      "path": "agent_s_repo\\gui_agents\\s3\\cli_app.py",
+      "accessCount": 1,
+      "lastAccessed": 1777042845661,
+      "type": "file"
+    },
+    {
+      "path": "agent_s_repo\\gui_agents\\s3\\agents\\grounding.py",
+      "accessCount": 1,
+      "lastAccessed": 1777042998102,
+      "type": "directory"
+    },
+    {
+      "path": "windows-mcp-client\\skills.py",
+      "accessCount": 1,
+      "lastAccessed": 1777046103724,
+      "type": "file"
+    },
+    {
+      "path": ".env",
+      "accessCount": 1,
+      "lastAccessed": 1777055098691,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

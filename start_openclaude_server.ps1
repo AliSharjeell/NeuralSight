@@ -11,10 +11,8 @@
 
 $ErrorActionPreference = "Stop"
 
-# ── MiniMax Provider Configuration ───────────────────────────────────────────
-$env:ANTHROPIC_BASE_URL           = "https://api.minimax.io/anthropic"
-$env:ANTHROPIC_API_KEY            = "sk-cp-Z2Ohn0sQ3cjdpRfRG_DzD8sgl37tb2b9ca2djVz-cf2SeDghzZbXCE90GGXR8-r2hjGRWpDt9lR5212SdTKa6FbpLCS8SHi6BRs-dSVjICRCBBGWIfpRX7Q"
-$env:ANTHROPIC_AUTH_TOKEN         = "sk-cp-Z2Ohn0sQ3cjdpRfRG_DzD8sgl37tb2b9ca2djVz-cf2SeDghzZbXCE90GGXR8-r2hjGRWpDt9lR5212SdTKa6FbpLCS8SHi6BRs-dSVjICRCBBGWIfpRX7Q"
+# Keys should be set in your environment or a .env file.
+# The script will use existing environment variables if they are set.
 $env:API_TIMEOUT_MS               = "3000000"
 $env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1"
 $env:ANTHROPIC_MODEL              = "MiniMax-M2.7"

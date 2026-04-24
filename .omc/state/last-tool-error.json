@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd C:/AppsNew/NeuralSight && pip install pvporcupine pyaudio openai-whisper torch --index-url https://download.pytorch.org/whl/cu121 2>&1\",\"timeout\":300000,\"description\":\"Install voice pip...",
+  "error": "Exit code 1\nDefaulting to user installation because normal site-packages is not writeable\r\nLooking in indexes: https://download.pytorch.org/whl/cu121\r\nERROR: Could not find a version that satisfies the requirement pvporcupine (from versions: none)\r\n\r\n[notice] A new release of pip is available: 25.3 -> 26.0.1\r\n[notice] To update, run: python.exe -m pip install --upgrade pip\r\nERROR: No matching distribution found for pvporcupine",
+  "timestamp": "2026-04-24T18:01:14.899Z",
+  "retry_count": 1
+}

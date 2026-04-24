@@ -18,3 +18,7 @@ python-dotenv>=1.0.0          # Load .env file for API keys
 
 # CLI Automation
 pexpect>=4.8.0                # Expect-like subprocess control
+
+# OpenClaude gRPC Client
+grpcio>=1.62.0                # gRPC runtime
+grpcio-tools>=1.62.0          # protoc compiler for Python stubs
