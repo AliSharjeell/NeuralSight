@@ -1,47 +1,66 @@
 # NeuralSight: Max
 
-A high-speed, voice-controlled Windows assistant powered by **OpenClaude** and **Groq Whisper**.
+**Bridging the gap between human intent and digital autonomy.**
 
-## Features
-- **Max Wake-Word**: Reliable wake-word detection using Groq's `whisper-large-v3-turbo`.
-- **Interruptible Pipeline**: Say "Max" at any time to cancel the current task and start a new one.
-- **Floating Pill UI**: A modern, translucent UI that follows your focus and shows real-time waveforms.
-- **18+ Windows Tools**: Full control over apps, files, registry, UI elements, and PowerShell via `windows-mcp`.
-- **Headless & Fast**: Optimized for low latency and Snappy voice interactions.
+Millions of people with upper limb amputations or severe motor impairments can't access their computers as fully and freely as they want to. Right now, bridging that gap requires thousands of dollars in bulky, specialized hardware.
 
-## Setup
+**We are changing that.** NeuralSight is a dual-modal accessibility suite that delivers total digital autonomy using nothing but a standard everyday webcam and a microphone.
 
-1. **Prerequisites**:
-   - [Bun](https://bun.sh) (for the gRPC server)
-   - [Python 3.10+](https://python.org)
-   - [uv](https://github.com/astral-sh/uv) (for MCP server management)
+---
 
-2. **Environment**:
-   Create a `.env` file in the root:
-   ```env
-   GROQ_API_KEY=your_key_here
-   MINIMAX_API_KEY=your_key_here
-   ```
+## 🚀 The Vision
 
-3. **Install Dependencies**:
-   ```bash
-   pip install customtkinter SpeechRecognition pyaudio groq python-dotenv grpcio grpcio-tools
-   cd openclaude
-   bun install
-   ```
+### 1. Zero-Hardware Eyetracking
+We use lightweight computer vision running locally to track your gaze. Wherever you look on the screen, your pointer follows. An intentional blink is your click. It’s fluid, real-time, and completely eliminates the need for a physical mouse.
 
-4. **Run**:
-   Simply run the root batch file:
-   ```bash
-   .\start_neuralsight.bat
-   ```
+### 2. Agentic 'Computer Use'
+For typing and complex tasks, we built **Max**—an autonomous, multimodal AI agent that visually interprets the screen's GUI. Give it a voice command, and the agent takes over. It navigates the OS, reasons through application states, and fills out input fields—bypassing the keyboard entirely. It can even execute intricate system tasks that the user might not know how to do themselves.
 
-## Development & Testing
-This repo includes a custom skill for validating the Windows MCP tools:
-- `skills/windows-mcp-tool-tester/SKILL.md`: Use this to run automated QA on any of the 18 tools.
+---
 
-## Architecture
-- `voice_terminal_pipeline.py`: Main entry point for voice capture and UI.
-- `openclaude/`: Headless gRPC server re-exposing Claude Code internals.
-- `.mcp.json`: Configuration for the `windows-mcp` server.
-- `protos/`: gRPC service definitions.
+## 🛠️ Getting Started
+
+### 1. Setup Environment
+Ensure you have a `.env` file in the root directory with your keys:
+```env
+GROQ_API_KEY=your_groq_key
+ANTHROPIC_API_KEY=your_minimax_or_anthropic_key
+ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic
+```
+
+### 2. Launch the Suite
+The easiest way to start is using the provided batch script which handles port cleanup and dual-process orchestration:
+```powershell
+.\start_neuralsight.bat
+```
+
+**Manual Execution (for developers):**
+If you prefer running the components separately to see detailed logs:
+
+**Terminal 1 (Headless Server):**
+```powershell
+cd openclaude
+.\start_openclaude_server.ps1
+```
+
+**Terminal 2 (Voice Interface):**
+```powershell
+python voice_terminal_pipeline.py
+```
+
+---
+
+## 🎙️ Voice Interaction
+- **Wake Word**: Say `"Max"` to activate the assistant.
+- **Interruptible**: Say `"Max"` or `"Max, stop"` at any time during execution to cancel or redirect the current task.
+- **Visual Feedback**: A floating, modern pill UI provides real-time waveform feedback and natural language status updates (e.g., *"Thinking..."*, *"Working on it..."*).
+
+## 🧩 Key Technologies
+- **OpenClaude**: Headless gRPC server for agentic computer control.
+- **Groq Whisper**: Ultra-low latency voice transcription (`whisper-large-v3-turbo`).
+- **Windows-MCP**: Direct system integration for 91+ specialized tools (Files, Registry, Browser, UI).
+- **CustomTkinter**: Premium, hardware-accelerated Python UI.
+
+---
+
+*NeuralSight: Bringing together human-centric empathy and state-of-the-art agentic workflows. No expensive rigs. Just seamless, fully autonomous computer access.*
