@@ -9,15 +9,15 @@ for /f "tokens=5" %%a in ('netstat -aon ^| findstr :50051 ^| findstr LISTENING')
     taskkill /F /PID %%a >nul 2>&1
 )
 
-:: 2. Start OpenClaude gRPC Server
-echo [NeuralSight] Launching OpenClaude Server...
-start "NeuralSight Server" /b powershell -ExecutionPolicy Bypass -File "%~dp0\start_openclaude_server.ps1"
+:: 2. Start OpenClaude gRPC Server in a SEPARATE window for logs
+echo [NeuralSight] Launching OpenClaude Server in new window...
+start "NeuralSight: OpenClaude Server Logs" powershell -NoExit -ExecutionPolicy Bypass -File "%~dp0\start_openclaude_server.ps1"
 
 :: Wait for server tools to load
 echo [NeuralSight] Waiting for tools to load (5s)...
 timeout /t 5 /nobreak >nul
 
-:: 3. Start Voice Pipeline UI
+:: 3. Start Voice Pipeline UI in the CURRENT window
 echo [NeuralSight] Launching Voice UI...
 python "%~dp0\voice_terminal_pipeline.py"
 
