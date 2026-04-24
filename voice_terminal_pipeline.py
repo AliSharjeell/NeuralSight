@@ -345,7 +345,7 @@ class NeuralSightWindow(ctk.CTk):
         # Adjust for multiple monitors or high DPI
         # We use winfo_screenwidth() which usually refers to the primary monitor
         x = int((sw - self.WIN_W) / 2)
-        y = int(sh - self.WIN_H - 80) # Slightly higher to clear all taskbar types
+        y = int(sh - self.WIN_H - 120) # Moved up per user request
         
         self.geometry(f"{self.WIN_W}x{self.WIN_H}+{x}+{y}")
 
@@ -452,7 +452,7 @@ class NeuralSightWindow(ctk.CTk):
         sw = self.winfo_screenwidth()
         sh = self.winfo_screenheight()
         x = int((sw - new_w) / 2)
-        y = int(sh - self.WIN_H - 80)
+        y = int(sh - self.WIN_H - 120)
         self.geometry(f"{new_w}x{self.WIN_H}+{x}+{y}")
 
         if state not in ("LISTENING",):
