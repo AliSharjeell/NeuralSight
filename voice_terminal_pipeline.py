@@ -353,7 +353,6 @@ class NeuralSightWindow(ctk.CTk):
         self.pill = ctk.CTkFrame(
             self,
             corner_radius=26,
-            fg_color=self.STATE_COLORS["SLEEPING"],
             border_width=0,
             fg_color=self.STATE_COLORS["SLEEPING"],
             height=self.WIN_H
