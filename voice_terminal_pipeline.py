@@ -93,28 +93,25 @@ USER COMMAND: {text}
 
 AVAILABLE TOOLS (windows-mcp):
 - App: launch/close apps (app_name="chrome", "notepad", etc.)
-- PowerShell: run any command (use this for complex tasks)
-- Shortcut: keys like "ctrl+l", "enter", "win+r"
+- PowerShell: run any command
+- Shortcut: keys like "ctrl+l", "enter", "win+r", "alt+tab"
 - Type: type text, press_enter=true
 - Click/Move/Scroll: UI interaction
 - Screenshot/Snapshot: see the screen/UI tree
 - FileSystem/Registry: file/reg ops
-- Clipboard: read/write clipboard
-- Process/Notification/Wait: system state
-- SystemInfo (via PowerShell): check CPU/RAM usage if requested
+- Clipboard/Process/Notification/Wait
 
 WORKFLOW FOR BROWSER TASKS:
-1. App(action="launch", app_name="chrome")
-2. Wait(seconds=2)
-3. Shortcut(keys="ctrl+l")
-4. Type(text="https://google.com/search?q=...", press_enter=true) or the specific site.
+1. PRIORITIZE EXISTING WINDOWS: If Chrome is already open (check Snapshot), do NOT launch a new one.
+2. If Chrome is not focused: App(action="launch", app_name="chrome") will focus the existing window.
+3. If Chrome is already focused: Directly use Shortcut(keys="ctrl+l") and Type the URL.
+4. To search: Type the search URL (e.g., https://google.com/search?q=...) directly into the address bar.
 
 HINTS:
-- "X" means x.com (Twitter).
-- To search, directly navigate to a search URL for speed.
-- If an app is already open, use it instead of re-launching.
-- Always use the most efficient tool (e.g., Type with press_enter=true instead of Type then Click).
-- For system health, use PowerShell `Get-Process | Sort-Object CPU -Descending | Select-Object -First 5` etc.
+- "X" means x.com.
+- Use `Snapshot()` frequently to see if a browser is already on screen.
+- If multiple Chrome windows exist, use the most recent one.
+- Avoid App(action="launch") if the app is already visible; just use Shortcut/Click.
 
 Execute the user's request flawlessly and quickly.
 """
