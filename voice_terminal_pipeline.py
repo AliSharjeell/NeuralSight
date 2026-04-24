@@ -314,10 +314,10 @@ class NeuralSightWindow(ctk.CTk):
     }
     STATE_GLOW = {
         "SLEEPING":   "#3F3F46",   # zinc-700
-        "LISTENING":  "#3F3F46",
-        "PROCESSING": "#3F3F46",
-        "EXECUTING":  "#3F3F46",
-        "ERROR":      "#3F3F46",
+        "LISTENING":  "#3B82F6",   # blue-500
+        "PROCESSING": "#10B981",   # emerald-500
+        "EXECUTING":  "#8B5CF6",   # violet-500
+        "ERROR":      "#EF4444",   # red-500
     }
 
     WIN_W, WIN_H = 400, 52
@@ -428,7 +428,13 @@ class NeuralSightWindow(ctk.CTk):
         self._current_state = state
         color = self.STATE_COLORS.get(state, self.STATE_COLORS["SLEEPING"])
         glow = self.STATE_GLOW.get(state, self.STATE_GLOW["SLEEPING"])
-        self.pill.configure(fg_color=color)
+
+        # Border: Glow only when EXECUTING or PROCESSING
+        if state in ("EXECUTING", "PROCESSING"):
+            self.pill.configure(fg_color=color, border_width=1, border_color=glow)
+        else:
+            self.pill.configure(fg_color=color, border_width=0)
+
         self.state_label.configure(text=message)
         self.waveform.configure(bg=color)
         self.dot_canvas.configure(bg=color)
