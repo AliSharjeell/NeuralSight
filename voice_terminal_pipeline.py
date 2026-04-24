@@ -46,10 +46,15 @@ import struct
 import uuid
 from typing import Optional
 
-# Force UTF-8 on Windows so Unicode log characters don't crash
+# Force UTF-8 and High DPI awareness on Windows
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
+    try:
+        from ctypes import windll
+        windll.shcore.SetProcessDpiAwareness(1)
+    except Exception:
+        pass
 
 import grpc
 from protos import openclaude_pb2
@@ -333,11 +338,15 @@ class NeuralSightWindow(ctk.CTk):
         self.attributes("-alpha", 0.88)
 
         # Center-bottom placement (Initial)
-        self.update()
+        self.update_idletasks()
         sw = self.winfo_screenwidth()
         sh = self.winfo_screenheight()
-        x = (sw - self.WIN_W) // 2
-        y = sh - self.WIN_H - 60     # 60px above taskbar
+        
+        # Adjust for multiple monitors or high DPI
+        # We use winfo_screenwidth() which usually refers to the primary monitor
+        x = int((sw - self.WIN_W) / 2)
+        y = int(sh - self.WIN_H - 80) # Slightly higher to clear all taskbar types
+        
         self.geometry(f"{self.WIN_W}x{self.WIN_H}+{x}+{y}")
 
         # ── Pill container ─────────────────────────────────────────────────
@@ -442,8 +451,8 @@ class NeuralSightWindow(ctk.CTk):
         # Re-center window based on new width
         sw = self.winfo_screenwidth()
         sh = self.winfo_screenheight()
-        x = (sw - new_w) // 2
-        y = sh - self.WIN_H - 60
+        x = int((sw - new_w) / 2)
+        y = int(sh - self.WIN_H - 80)
         self.geometry(f"{new_w}x{self.WIN_H}+{x}+{y}")
 
         if state not in ("LISTENING",):
