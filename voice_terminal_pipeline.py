@@ -400,10 +400,11 @@ class NeuralSightWindow(ctk.CTk):
         self._wave_lock = threading.Lock()
         self._current_state = "SLEEPING"
 
-        # Waveform bar history for smooth animation
-        self._num_bars = 9
+        # Waveform bar history for smooth animation (High Density)
+        self._num_bars = 24
         self._bar_heights = [0.0] * self._num_bars
         self._target_heights = [0.0] * self._num_bars
+        self._bar_colors = ["#3B82F6", "#60A5FA", "#93C5FD", "#60A5FA", "#3B82F6"] # Blue gradient palette
 
         # ── Idle breathing animation ─────────────────────────────────────────
         self._breathing_phase = 0.0
@@ -476,8 +477,7 @@ class NeuralSightWindow(ctk.CTk):
         cw = self._wave_canvas_w
         ch = self._wave_canvas_h
 
-        if state == "LISTENING" and rms > 0.01:
-            # Live waveform from microphone RMS
+        if state == "LISTENING":
             import random
             for i in range(self._num_bars):
                 center_factor = 0.3 + 0.7 * (1 - abs(i - self._num_bars // 2) / (self._num_bars // 2 + 0.01))
@@ -498,51 +498,29 @@ class NeuralSightWindow(ctk.CTk):
                 val = 0.15 + 0.25 * abs(math.sin(self._breathing_phase + phase_offset))
                 self._target_heights[i] = val
 
-        # Smooth lerp toward targets
-        for i in range(self._num_bars):
-            self._bar_heights[i] += (self._target_heights[i] - self._bar_heights[i]) * 0.3
-
-        # Draw bars
+        # Clear and Redraw bars with rounded caps
         self.waveform.delete("bar")
-        bar_w = 6
-        gap = 5
-        total_w = self._num_bars * bar_w + (self._num_bars - 1) * gap
-        start_x = (cw - total_w) // 2
-        glow = self.STATE_GLOW.get(state, "#71717A")
-        bar_color = "#FAFAFA" if state == "LISTENING" else glow
-
+        bar_spacing = cw / self._num_bars
         for i in range(self._num_bars):
-            h = max(3, int(ch * 0.85 * self._bar_heights[i]))
-            x0 = start_x + i * (bar_w + gap)
-            y0 = (ch - h) // 2
+            # Smoothing
+            self._bar_heights[i] += (self._target_heights[i] - self._bar_heights[i]) * 0.25
+            h = self._bar_heights[i] * ch
             
-            # Gradient: center bars are brighter/different color
-            dist_from_center = abs(i - self._num_bars // 2) / (self._num_bars // 2 + 0.01)
-            if state == "LISTENING":
-                # Light blue to violet gradient
-                r = int(250 - 50 * dist_from_center)
-                g = int(250 - 100 * dist_from_center)
-                b = 255
-                cur_bar_color = f"#{r:02x}{g:02x}{b:02x}"
-            else:
-                cur_bar_color = glow if dist_from_center > 0.4 else "#FAFAFA"
-
-            # Rounded bar via oval caps + rectangle body
-            r_rad = min(bar_w // 2, 3)
-            self.waveform.create_rectangle(
-                x0, y0 + r_rad, x0 + bar_w, y0 + h - r_rad,
-                fill=cur_bar_color, outline="", tags="bar"
-            )
-            self.waveform.create_oval(
-                x0, y0, x0 + bar_w, y0 + 2 * r_rad,
-                fill=cur_bar_color, outline="", tags="bar"
-            )
-            self.waveform.create_oval(
-                x0, y0 + h - 2 * r_rad, x0 + bar_w, y0 + h,
-                fill=cur_bar_color, outline="", tags="bar"
+            x_pos = i * bar_spacing + 2
+            y_mid = ch / 2
+            
+            # Select color from gradient palette
+            color_idx = int((i / self._num_bars) * (len(self._bar_colors) - 1))
+            bar_color = self._bar_colors[color_idx]
+            
+            # Draw rounded bar
+            self.waveform.create_line(
+                x_pos, y_mid - h/2 - 1,
+                x_pos, y_mid + h/2 + 1,
+                width=3, fill=bar_color, capstyle="round", tags="bar"
             )
 
-        self.after(33, self._animate)   # ~30fps
+        self.after(33, self._animate)
 
     # --------------------------------------------------------------------------
     # Console output → show latest line in pill during EXECUTING
@@ -686,7 +664,7 @@ class AudioPipeline:
     # Main loop
     # --------------------------------------------------------------------------
     def _loop(self) -> None:
-        self.widget.set_state("SLEEPING", "Say 'Max' to wake...")
+        self.widget.set_state("SLEEPING", "Ready for you")
 
         while self.running:
             try:
@@ -755,26 +733,24 @@ class AudioPipeline:
 
         while self.running:
             time.sleep(0.1)  # let mic buffer flush
-            self.widget.set_state("LISTENING", "Speak your command...")
+            self.widget.set_state("LISTENING", "I'm listening...")
             
             audio = self._capture_command()
             if audio is None:
-                self.widget.set_state("SLEEPING", "Say 'Josh' to wake...")
+                self.widget.set_state("SLEEPING", "Ready for you")
                 return
 
-            self.widget.set_state("PROCESSING", "Transcribing...")
+            self.widget.set_state("PROCESSING", "Thinking...")
             transcribed = self._transcribe(audio)
             if not transcribed:
-                self.widget.set_state("ERROR", "Transcription failed")
-                time.sleep(2)
-                self.widget.set_state("SLEEPING", "Say 'Josh' to wake...")
+                self.widget.set_state("ERROR", "Try again?")
+                time.sleep(1.5)
+                self.widget.set_state("SLEEPING", "Say 'Max'...")
                 return
 
-            self._print(f"[Heard] \"{transcribed}\"")
             self.widget.set_user_prompt(transcribed)
-
             cmd = PROMPT_TEMPLATE.format(text=transcribed)
-            self.widget.set_state("EXECUTING", "Running...")
+            self.widget.set_state("EXECUTING", "Working on it...")
 
             # Clear done event before sending so we can wait for completion
             _done_event.clear()
@@ -799,12 +775,15 @@ class AudioPipeline:
                     break
                 else:
                     # DONE naturally
+                    self.widget.set_state("SLEEPING", "Done!")
+                    time.sleep(1.5)
                     break
             else:
                 self._print("[CLI] Send failed.")
+                self.widget.set_state("ERROR", "Connection failed")
+                time.sleep(2)
                 break
 
-        time.sleep(0.2)
         self.widget.set_state("SLEEPING", "Say 'Max'...")
 
     def _wait_with_interrupt(self) -> str:
