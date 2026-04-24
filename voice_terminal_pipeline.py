@@ -354,8 +354,8 @@ class NeuralSightWindow(ctk.CTk):
             self,
             corner_radius=26,
             fg_color=self.STATE_COLORS["SLEEPING"],
-            border_width=1,
-            border_color="#27272A",   # zinc-800 subtle border
+            border_width=0,
+            fg_color=self.STATE_COLORS["SLEEPING"],
             height=self.WIN_H
         )
         self.pill.pack(fill="both", expand=True, padx=0, pady=0)
@@ -432,7 +432,7 @@ class NeuralSightWindow(ctk.CTk):
         self._current_state = state
         color = self.STATE_COLORS.get(state, self.STATE_COLORS["SLEEPING"])
         glow = self.STATE_GLOW.get(state, self.STATE_GLOW["SLEEPING"])
-        self.pill.configure(fg_color=color, border_color=glow)
+        self.pill.configure(fg_color=color)
         self.state_label.configure(text=message)
         self.waveform.configure(bg=color)
         self.dot_canvas.configure(bg=color)
@@ -484,19 +484,13 @@ class NeuralSightWindow(ctk.CTk):
                 jitter = random.uniform(0.7, 1.3)
                 self._target_heights[i] = min(1.0, rms * center_factor * jitter * 2.5)
         elif state == "SLEEPING":
-            # Gentle breathing wave
-            self._breathing_phase += 0.06
+            # Zero heights when sleeping
             for i in range(self._num_bars):
-                phase_offset = i * 0.45
-                val = 0.08 + 0.06 * math.sin(self._breathing_phase + phase_offset)
-                self._target_heights[i] = val
+                self._target_heights[i] = 0.0
         elif state in ("PROCESSING", "EXECUTING"):
-            # Pulsing scanner effect
-            self._breathing_phase += 0.12
+            # Zero heights when working (User requested waveform only when listening)
             for i in range(self._num_bars):
-                phase_offset = i * 0.7
-                val = 0.15 + 0.25 * abs(math.sin(self._breathing_phase + phase_offset))
-                self._target_heights[i] = val
+                self._target_heights[i] = 0.0
 
         # Clear and Redraw bars with rounded caps
         self.waveform.delete("bar")
