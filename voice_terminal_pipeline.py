@@ -848,12 +848,16 @@ class AudioPipeline:
                 )
                 rms_thread.start()
 
+                # Set higher pause threshold for the command capture to allow "add-ons"
+                self.recognizer.pause_threshold = PAUSE_AFTER_SPEECH
                 audio = self.recognizer.listen(
                     source,
                     timeout=None,
                     phrase_time_limit=PHRASE_TIME_LIMIT
                 )
                 self._recording = False
+                # Reset to fast pause for wake word detection
+                self.recognizer.pause_threshold = 0.5
             self._print(f"[Recorder] Captured.")
             return audio
         except sr.WaitTimeoutError:
