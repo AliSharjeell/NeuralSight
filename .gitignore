@@ -1,0 +1,42 @@
+# Environment / secrets — never commit these
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+
+# Temporary / transient files
+*.wav
+*.tmp
+*.log
+*.bak
+*.swp
+
+# IDE / OS
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# NeuralSight specific
+.neural/
+*.wav
+*.pcm
+.neon/
