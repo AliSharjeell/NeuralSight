@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 
-echo [NeuralSight] Starting Josh (NeuralSight v2)...
+echo [NeuralSight] Starting Max (NeuralSight v2)...
 
 :: 1. Cleanup Port 50051 (Headless Server)
 echo [NeuralSight] Ensuring port 50051 is free...
@@ -21,5 +21,5 @@ timeout /t 5 /nobreak >nul
 echo [NeuralSight] Launching Voice UI...
 python "%~dp0\voice_terminal_pipeline.py"
 
-echo [NeuralSight] Josh has exited.
+echo [NeuralSight] Max has exited.
 pause

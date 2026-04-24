@@ -81,8 +81,8 @@ except ImportError:
 
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL      = os.getenv("GROQ_WHISPER_MODEL", "whisper-large-v3-turbo")
-# "josh" + phonetic variants PocketSphinx might produce
-WAKE_WORD_PHRASES = ["josh", "gosh", "josh", "jouche", "gotcha"]
+# "max" + phonetic variants
+WAKE_WORD_PHRASES = ["max", "macs", "macks", "marks", "mask"]
 MICROPHONE_INDEX = None
 CALIBRATION_SECONDS = 1.5
 ENERGY_THRESHOLD_FLOOR = 50
@@ -90,7 +90,7 @@ PAUSE_AFTER_SPEECH = 2.0       # seconds of silence before we consider the promp
 PHRASE_TIME_LIMIT   = 15       # max seconds of speech to capture
 GRPC_HOST = "127.0.0.1"
 GRPC_PORT = 50051
-PROMPT_TEMPLATE = """You are Josh, a high-speed Windows AI assistant. 
+PROMPT_TEMPLATE = """You are Max, a high-speed Windows AI assistant. 
 You are being controlled via VOICE. Keep responses extremely brief (1 sentence max).
 You have FULL ACCESS to the Windows system via the windows-mcp tools.
 
@@ -372,7 +372,7 @@ class NeuralSightWindow(ctk.CTk):
 
         # ── State label ──────────────────────────────────────────────────────
         self.state_label = ctk.CTkLabel(
-            self.pill, text="Say 'Josh'",
+            self.pill, text="Say 'Max'",
             font=("Poppins", 12, "bold"), text_color="#A1A1AA"   # zinc-400
         )
         self.state_label.pack(side="left", padx=(0, 4), pady=0)
@@ -416,7 +416,7 @@ class NeuralSightWindow(ctk.CTk):
         self.pill.bind("<Button-1>", self._on_mouse_down)
         self.pill.bind("<B1-Motion>", self._on_mouse_drag)
 
-        self.set_state("SLEEPING", "Say 'Josh'")
+        self.set_state("SLEEPING", "Say 'Max'")
 
         # Start polling stdout queue for log forwarding
         self._poll_stdout()
@@ -686,7 +686,7 @@ class AudioPipeline:
     # Main loop
     # --------------------------------------------------------------------------
     def _loop(self) -> None:
-        self.widget.set_state("SLEEPING", "Say 'Josh' to wake...")
+        self.widget.set_state("SLEEPING", "Say 'Max' to wake...")
 
         while self.running:
             try:
@@ -697,7 +697,7 @@ class AudioPipeline:
                 time.sleep(2)
 
     def _listen_for_wake_word(self) -> None:
-        self.widget.set_state("SLEEPING", "Say 'Josh'...")
+        self.widget.set_state("SLEEPING", "Say 'Max'...")
 
         try:
             with self.microphone as source:
@@ -805,7 +805,7 @@ class AudioPipeline:
                 break
 
         time.sleep(0.2)
-        self.widget.set_state("SLEEPING", "Say 'Josh'...")
+        self.widget.set_state("SLEEPING", "Say 'Max'...")
 
     def _wait_with_interrupt(self) -> str:
         """

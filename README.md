@@ -1,10 +1,10 @@
-# NeuralSight: Josh
+# NeuralSight: Max
 
 A high-speed, voice-controlled Windows assistant powered by **OpenClaude** and **Groq Whisper**.
 
 ## Features
-- **Josh Wake-Word**: Reliable wake-word detection using Groq's `whisper-large-v3-turbo`.
-- **Interruptible Pipeline**: Say "Josh" at any time to cancel the current task and start a new one.
+- **Max Wake-Word**: Reliable wake-word detection using Groq's `whisper-large-v3-turbo`.
+- **Interruptible Pipeline**: Say "Max" at any time to cancel the current task and start a new one.
 - **Floating Pill UI**: A modern, translucent UI that follows your focus and shows real-time waveforms.
 - **18+ Windows Tools**: Full control over apps, files, registry, UI elements, and PowerShell via `windows-mcp`.
 - **Headless & Fast**: Optimized for low latency and Snappy voice interactions.
