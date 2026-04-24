@@ -318,7 +318,7 @@ class NeuralSightWindow(ctk.CTk):
         "ERROR":      "#EF4444",   # red-500
     }
 
-    WIN_W, WIN_H = 380, 52
+    WIN_W, WIN_H = 400, 52
 
     def __init__(self):
         super().__init__()
@@ -332,8 +332,8 @@ class NeuralSightWindow(ctk.CTk):
         # Transparency (85% opaque)
         self.attributes("-alpha", 0.88)
 
-        # Center-bottom placement
-        self.update_idletasks()
+        # Center-bottom placement (Initial)
+        self.update()
         sw = self.winfo_screenwidth()
         sh = self.winfo_screenheight()
         x = (sw - self.WIN_W) // 2
@@ -367,6 +367,13 @@ class NeuralSightWindow(ctk.CTk):
             font=("Poppins", 12, "bold"), text_color="#A1A1AA"   # zinc-400
         )
         self.state_label.pack(side="left", padx=(0, 4), pady=0)
+
+        # ── User Prompt label (italic/smaller) ──────────────────────────────────
+        self.user_label = ctk.CTkLabel(
+            self.pill, text="",
+            font=("Poppins", 11, "italic"), text_color="#71717A"   # zinc-500
+        )
+        self.user_label.pack(side="left", padx=(4, 8), pady=0)
 
         # ── Waveform canvas (right side) ─────────────────────────────────────
         self._wave_canvas_w = 120
@@ -426,11 +433,18 @@ class NeuralSightWindow(ctk.CTk):
         self.state_label.configure(text_color=txt_color)
 
         # Dynamic Width: expands if text is long
-        text_len = len(message)
+        text_len = len(message) + len(self.user_label.cget("text"))
         base_w = 400
-        extra = max(0, (text_len - 30) * 8)
+        extra = max(0, (text_len - 25) * 8)
         new_w = base_w + extra
         self.pill.configure(width=new_w)
+        
+        # Re-center window based on new width
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        x = (sw - new_w) // 2
+        y = sh - self.WIN_H - 60
+        self.geometry(f"{new_w}x{self.WIN_H}+{x}+{y}")
 
         if state not in ("LISTENING",):
             self._target_heights = [0.0] * self._num_bars
@@ -539,6 +553,12 @@ class NeuralSightWindow(ctk.CTk):
             display = last_line[:42] + ("..." if len(last_line) > 42 else "")
             self.state_label.configure(text=display)
         self.after(50, self._poll_stdout)
+
+    def set_user_prompt(self, text: str) -> None:
+        """Update the italicized user prompt label."""
+        # Truncate if too long
+        display = text[:35] + ("..." if len(text) > 35 else "")
+        self.after(0, lambda: self.user_label.configure(text=f"\"{display}\""))
 
     def log(self, text: str) -> None:
         """Forward to terminal stdout only."""
@@ -742,6 +762,7 @@ class AudioPipeline:
                 return
 
             self._print(f"[Heard] \"{transcribed}\"")
+            self.widget.set_user_prompt(transcribed)
 
             cmd = PROMPT_TEMPLATE.format(text=transcribed)
             self.widget.set_state("EXECUTING", "Running...")
