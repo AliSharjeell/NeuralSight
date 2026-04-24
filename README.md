@@ -16,12 +16,25 @@ We use lightweight computer vision running locally to track your gaze. Wherever 
 ### 2. Agentic 'Computer Use'
 For typing and complex tasks, we built **Max**—an autonomous, multimodal AI agent that visually interprets the screen's GUI. Give it a voice command, and the agent takes over. It navigates the OS, reasons through application states, and fills out input fields—bypassing the keyboard entirely. It can even execute intricate system tasks that the user might not know how to do themselves.
 
+## 📋 Prerequisites
+Before you clone and run, ensure you have the following installed:
+- **Python 3.10+**: Core logic and UI.
+- **Bun**: Required to run the OpenClaude gRPC server.
+- **Git**: To clone the repo and its submodules.
+
 ---
 
 ## 🛠️ Getting Started
 
-### 1. Setup Environment
-Ensure you have a `.env` file in the root directory with your keys:
+### 1. Clone & Install
+```powershell
+git clone <your-repo-url>
+cd NeuralSight
+pip install -r requirements.txt
+```
+
+### 2. Setup Environment
+Rename `.env.example` to `.env` and fill in your keys.
 ```env
 GROQ_API_KEY=your_groq_key
 ANTHROPIC_API_KEY=your_minimax_or_anthropic_key
