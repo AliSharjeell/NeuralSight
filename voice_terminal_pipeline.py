@@ -310,17 +310,17 @@ class NeuralSightWindow(ctk.CTk):
 
     STATE_COLORS = {
         "SLEEPING":   "#18181B",   # zinc-900
-        "LISTENING":  "#2563EB",   # blue-600
-        "PROCESSING": "#059669",   # emerald-600
-        "EXECUTING":  "#7C3AED",   # violet-600
-        "ERROR":      "#DC2626",   # red-600
+        "LISTENING":  "#18181B",   # Keep consistent zinc-900
+        "PROCESSING": "#18181B",
+        "EXECUTING":  "#18181B",
+        "ERROR":      "#18181B",
     }
     STATE_GLOW = {
         "SLEEPING":   "#3F3F46",   # zinc-700
-        "LISTENING":  "#3B82F6",   # blue-500
-        "PROCESSING": "#10B981",   # emerald-500
-        "EXECUTING":  "#8B5CF6",   # violet-500
-        "ERROR":      "#EF4444",   # red-500
+        "LISTENING":  "#3F3F46",
+        "PROCESSING": "#3F3F46",
+        "EXECUTING":  "#3F3F46",
+        "ERROR":      "#3F3F46",
     }
 
     WIN_W, WIN_H = 400, 52
@@ -345,7 +345,7 @@ class NeuralSightWindow(ctk.CTk):
         # Adjust for multiple monitors or high DPI
         # We use winfo_screenwidth() which usually refers to the primary monitor
         x = int((sw - self.WIN_W) / 2)
-        y = int(sh - self.WIN_H - 120) # Moved up per user request
+        y = int(sh - self.WIN_H - 160) # Moved up further per user request
         
         self.geometry(f"{self.WIN_W}x{self.WIN_H}+{x}+{y}")
 
@@ -452,7 +452,7 @@ class NeuralSightWindow(ctk.CTk):
         sw = self.winfo_screenwidth()
         sh = self.winfo_screenheight()
         x = int((sw - new_w) / 2)
-        y = int(sh - self.WIN_H - 120)
+        y = int(sh - self.WIN_H - 160)
         self.geometry(f"{new_w}x{self.WIN_H}+{x}+{y}")
 
         if state not in ("LISTENING",):
