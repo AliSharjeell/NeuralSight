@@ -82,7 +82,7 @@ except ImportError:
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL      = os.getenv("GROQ_WHISPER_MODEL", "whisper-large-v3-turbo")
 # "max" + expanded phonetic variants for better interrupt detection
-WAKE_WORD_PHRASES = ["max", "macs", "macks", "marks", "mask", "match", "mass", "mats", "maps"]
+WAKE_WORD_PHRASES = ["max", "macs", "macks", "marks", "mask", "match", "mass", "mats", "maps", "makes", "mix", "marx", "necks", "next", "math", "mad", "master", "mess", "mouse"]
 MICROPHONE_INDEX = None
 CALIBRATION_SECONDS = 1.5
 ENERGY_THRESHOLD_FLOOR = 50
@@ -633,10 +633,12 @@ class AudioPipeline:
             t = self.recognizer.energy_threshold
             if t < ENERGY_THRESHOLD_FLOOR:
                 self.recognizer.energy_threshold = ENERGY_THRESHOLD_FLOOR
-            # Wait 5s of silence before considering speech done
-            self.recognizer.pause_threshold = PAUSE_AFTER_SPEECH
-            self.recognizer.non_speaking_duration = min(PAUSE_AFTER_SPEECH, 1.0)
-            self._print(f"[Mic] Energy threshold: {t:.1f} | Pause: {PAUSE_AFTER_SPEECH}s")
+            # Optimize for 1-syllable wake word "Max"
+            self.recognizer.pause_threshold = 0.5
+            self.recognizer.phrase_threshold = 0.2
+            self.recognizer.non_speaking_duration = 0.3
+            
+            self._print(f"[Mic] Energy threshold: {t:.1f} | Wait: {PAUSE_AFTER_SPEECH}s")
         except Exception as e:
             self._print(f"[Mic] Calibration warning: {e}")
             self.recognizer.energy_threshold = ENERGY_THRESHOLD_FLOOR
