@@ -22,6 +22,10 @@ $env:ANTHROPIC_DEFAULT_OPUS_MODEL   = "MiniMax-M2.7"
 $env:ANTHROPIC_DEFAULT_HAIKU_MODEL  = "MiniMax-M2.7"
 $env:CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1"
 
+# ── Debug Logging ────────────────────────────────────────────────────────────
+$env:DEBUG                        = "1"
+$env:CLAUDE_CODE_DEBUG_LOG_LEVEL  = "verbose"
+
 # ── gRPC Server Binding ──────────────────────────────────────────────────────
 $env:GRPC_PORT = "50051"
 $env:GRPC_HOST = "127.0.0.1"
