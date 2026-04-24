@@ -81,8 +81,8 @@ except ImportError:
 
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL      = os.getenv("GROQ_WHISPER_MODEL", "whisper-large-v3-turbo")
-# "max" + phonetic variants
-WAKE_WORD_PHRASES = ["max", "macs", "macks", "marks", "mask"]
+# "max" + expanded phonetic variants for better interrupt detection
+WAKE_WORD_PHRASES = ["max", "macs", "macks", "marks", "mask", "match", "mass", "mats", "maps"]
 MICROPHONE_INDEX = None
 CALIBRATION_SECONDS = 1.5
 ENERGY_THRESHOLD_FLOOR = 50
@@ -99,26 +99,23 @@ USER COMMAND: {text}
 AVAILABLE TOOLS (windows-mcp):
 - App: launch/close apps (app_name="chrome", etc.)
 - PowerShell: run any command
-- Shortcut: keys like "ctrl+l", "enter", "win+r", "alt+tab"
+- Shortcut: keys like "ctrl+l", "ctrl+t", "enter", "win+r", "alt+tab"
 - Type: type text, press_enter=true
 - Click/Move/Scroll: UI interaction
 - Screenshot/Snapshot: see the screen/UI tree
 - FileSystem/Registry/Clipboard/Process/Wait
 
-RULES FOR NAVIGATION:
-1. NEVER type a URL or domain into a website's internal search bar.
-2. ALWAYS use Shortcut(keys="ctrl+l") first to focus the browser's address bar.
-3. Then Type(text="https://...", press_enter=true).
-
-WORKFLOW FOR BROWSER TASKS:
-1. Use Snapshot() to see if Chrome is already open.
-2. If open, focus it via App(action="launch", app_name="chrome") or just use it if already active.
-3. Use Shortcut(keys="ctrl+l") to navigate directly to the target site (github.com, x.com, etc.) or a search URL.
+RULES FOR NAVIGATION & BROWSER:
+1. NEVER use App(action="launch") if Chrome is already running (check Snapshot).
+2. To navigate: Use Shortcut(keys="ctrl+l") to focus the current tab's address bar, then Type the URL.
+3. To open a new tab: Only use Shortcut(keys="ctrl+t") if the user specifically asks for a "new tab". Otherwise, reuse the current tab.
+4. NEVER type a URL into a website's internal search bar.
+5. If the current tab is already the correct site (e.g., GitHub), do NOT reload it; just start the task.
 
 HINTS:
 - "X" is only for x.com (Twitter) tasks.
 - If the user says "GitHub", go to github.com.
-- Avoid multi-step search (navigating to google.com first) unless necessary; use direct URLs.
+- Use direct URLs (e.g., https://google.com/search?q=...) for searches.
 
 Execute the user's request flawlessly and quickly.
 """
@@ -794,8 +791,8 @@ class AudioPipeline:
             # Quick listen for interrupt wake word
             try:
                 with self.microphone as source:
-                    # Very short listen to avoid blocking
-                    audio = self.recognizer.listen(source, timeout=0.2, phrase_time_limit=1.5)
+                    # Faster listen for interrupt
+                    audio = self.recognizer.listen(source, timeout=0.1, phrase_time_limit=1.2)
                 text = self._quick_transcribe(audio)
                 if not text:
                     continue
