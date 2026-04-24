@@ -43,7 +43,17 @@ import threading
 import subprocess
 import re
 import struct
+import uuid
 from typing import Optional
+
+# Force UTF-8 on Windows so Unicode log characters don't crash
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
+import grpc
+from protos import openclaude_pb2
+from protos import openclaude_pb2_grpc
 
 import customtkinter as ctk
 import speech_recognition as sr
@@ -66,117 +76,225 @@ except ImportError:
 
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL      = os.getenv("GROQ_WHISPER_MODEL", "whisper-large-v3-turbo")
-WAKE_WORD_PHRASES = ["computer", "jarvis", "alexa", "hey siri", "ok google", "hey google"]
+# "josh" + phonetic variants PocketSphinx might produce
+WAKE_WORD_PHRASES = ["josh", "gosh", "josh", "jouche", "gotcha"]
 MICROPHONE_INDEX = None
 CALIBRATION_SECONDS = 1.5
 ENERGY_THRESHOLD_FLOOR = 50
-CLAUDE_CLI_COMMAND = "claude"
-CLI_TIMEOUT_SECONDS = 180
-PROMPT_TEMPLATE = "/windows-mcp-tool-tester use windows mcp only and no playwright and on my screen {text}"
+PAUSE_AFTER_SPEECH = 2.0       # seconds of silence before we consider the prompt done
+PHRASE_TIME_LIMIT   = 15       # max seconds of speech to capture
+GRPC_HOST = "127.0.0.1"
+GRPC_PORT = 50051
+PROMPT_TEMPLATE = """You are a Windows desktop voice assistant. Execute the user's request using windows-mcp tools.
+
+AVAILABLE TOOLS (use these by exact name):
+- App: launch/resize/switch apps (e.g. App with action="launch", app_name="chrome")
+- Click: click screen elements by loc=[x,y] or label="element_id"
+- Type: type text into focused element, supports clear=true, press_enter=true
+- Shortcut: press key combos (e.g. keys="ctrl+l", keys="win+r", keys="enter")
+- Screenshot: capture current screen state
+- Snapshot: get UI tree with interactive element labels
+- Scroll: scroll up/down/left/right by loc or label
+- Move: move mouse cursor to coordinates
+- PowerShell: run any PowerShell command
+- Wait: pause for N seconds
+- Clipboard: get/set clipboard content
+- Scrape: extract content from URLs
+- FileSystem: read/write/copy/move/delete/list files
+- Process: list/kill processes
+- Notification: send Windows toast notifications
+- Registry: get/set/delete/list registry keys
+
+WORKFLOW FOR BROWSER TASKS:
+1. App(action="launch", app_name="chrome") or App(action="launch", app_name="msedge")
+2. Wait(seconds=2) for browser to open
+3. Shortcut(keys="ctrl+l") to focus address bar
+4. Type(text="https://youtube.com", press_enter=true)
+5. Wait(seconds=2) for page to load
+6. Screenshot() or Snapshot() to see current state
+7. Use Click/Type to interact with page elements
+
+RULES:
+1. ALWAYS use the tools above. NEVER say you cannot do something.
+2. Use Screenshot/Snapshot to verify each step succeeded.
+3. Work step by step. Be fast and efficient.
+4. For search: navigate to site, find search box via Snapshot labels, Click it, Type query.
+
+User request: {text}"""
 DEBUG_MODE = True
 
 
 # ============================================================================
-# CLAUDE SUBPROCESS MANAGER
+# OPENCLAUDE gRPC CLIENT
 # ============================================================================
 
-# Module-level process reference — single shared Claude instance
-_claude_process: Optional[subprocess.Popen] = None
-
-
-class ClaudeSubprocess:
+class OpenClaudeGrpcClient:
     """
-    Manages ONE persistent Claude Code CLI process (stored at module level
-    as _claude_process).  send() writes to its stdin; never spawns a second
-    instance.  A background thread streams stdout to the UI textbox.
+    Persistent gRPC client for the OpenClaude headless server.
+    Uses bidirectional streaming for real-time token output and auto-approves
+    tool permission requests so voice commands never hang waiting for input.
     """
 
     def __init__(self):
-        global _claude_process
-        self._start()
-        _claude_process = self._process
+        self.channel: Optional[grpc.Channel] = None
+        self.stub: Optional[openclaude_pb2_grpc.AgentServiceStub] = None
+        self.session_id = str(uuid.uuid4())
+        self._current_call: Optional[grpc.Call] = None
+        self._call_lock = threading.Lock()
+        self._running = True
+        self._connect()
 
-    def _start(self) -> None:
-        global _claude_process
-        try:
-            self._process = subprocess.Popen(
-                [CLAUDE_CLI_COMMAND],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                cwd=os.getcwd(),
-                env={**os.environ, "NO_COLOR": "1"}
-            )
-            _claude_process = self._process
-            self._running = True
-            self._reader_thread = threading.Thread(target=self._read_stdout, daemon=True)
-            self._reader_thread.start()
-            print(f"[CLI] Claude started (PID: {self._process.pid})")
-        except FileNotFoundError:
-            raise RuntimeError(
-                f"'{CLAUDE_CLI_COMMAND}' not found in PATH.\n"
-                "Install: https://docs.anthropic.com/en/docs/claude-code"
-            )
-
-    def _read_stdout(self) -> None:
-        """Background thread: reads Claude stdout line-by-line, queues for UI."""
-        while self._running and self._process and self._process.poll() is None:
+    def _connect(self) -> None:
+        target = f"{GRPC_HOST}:{GRPC_PORT}"
+        for attempt in range(1, 6):
             try:
-                line = self._process.stdout.readline()
-                if not line:
-                    break
-                decoded = line.decode('utf-8', errors='replace')
-                if decoded.strip():
-                    _stdout_queue.put(decoded)
-            except Exception:
-                break
+                self.channel = grpc.insecure_channel(target)
+                self.stub = openclaude_pb2_grpc.AgentServiceStub(self.channel)
+                grpc.channel_ready_future(self.channel).result(timeout=3)
+                print(f"[gRPC] Connected to OpenClaude server at {target}")
+                print(f"[gRPC] Session ID: {self.session_id[:8]}...")
+                return
+            except Exception as e:
+                print(f"[gRPC] Connection attempt {attempt}/5 failed — {e}")
+                if self.channel:
+                    self.channel.close()
+                self.channel = None
+                self.stub = None
+                if attempt < 5:
+                    time.sleep(2)
+        print(f"[gRPC] ERROR: Could not connect to {GRPC_HOST}:{GRPC_PORT} after 5 attempts.")
+        print("[gRPC] Make sure the server is running: .\\start_neuralsight.bat")
 
     def send(self, text: str) -> bool:
         """
-        Write a command to the persistent Claude stdin and flush.
-        Uses the module-level _claude_process reference so there is exactly
-        one process — never spawns a new one via subprocess.run or Popen.
+        Start a new bidirectional Chat stream with the given message.
+        Cancels any in-progress stream first.  The background receive thread
+        pushes tokens / tool events onto _stdout_queue in real time.
+
+        Returns (success, done_event) where done_event is a threading.Event
+        that gets set when the response stream finishes.
         """
-        global _claude_process
-
-        # Get current (possibly live-restored) process reference
-        proc = _claude_process
-
-        if not proc or proc.poll() is not None:
-            # Process died — restart once and reassign the global
-            print("[CLI] Process died — restarting...")
-            self._start()
-            proc = _claude_process
-
-        try:
-            cmd = PROMPT_TEMPLATE.format(text=text) + "\n"
-            proc.stdin.write(cmd.encode('utf-8'))
-            proc.stdin.flush()
-            print(f"[CLI] Sent: {cmd.strip()[:80]}...")
-            return True
-        except (BrokenPipeError, IOError) as e:
-            print(f"[CLI] Send error: {e}")
+        if not self.stub:
+            print("[gRPC] Not connected. Start the server first.")
             return False
 
+        # Cancel any in-progress stream so we don't have overlapping responses
+        self.cancel()
+
+
+        request_queue: queue.Queue = queue.Queue()
+        request_queue.put(openclaude_pb2.ClientMessage(
+            request=openclaude_pb2.ChatRequest(
+                message=text,
+                working_directory=os.getcwd(),
+                session_id=self.session_id
+            )
+        ))
+
+        def request_generator():
+            while self._running:
+                try:
+                    msg = request_queue.get(timeout=0.1)
+                    yield msg
+                except queue.Empty:
+                    continue
+
+        call = self.stub.Chat(request_generator())
+        with self._call_lock:
+            self._current_call = call
+
+        threading.Thread(target=self._receive, args=(call, request_queue), daemon=True).start()
+        print(f"[gRPC] Sent: {text[:80]}...")
+        return True, call
+
+    def _receive(self, call: grpc.Call, request_queue: queue.Queue) -> None:
+        """Background thread: iterate server messages and queue them for the UI."""
+        try:
+            for response in call:
+                is_terminal = self._handle_response(response, request_queue)
+                if is_terminal:
+                    break
+        except grpc.RpcError as e:
+            if e.code() != grpc.StatusCode.CANCELLED:
+                _stdout_queue.put(f"[gRPC Error] {e.details()}")
+        finally:
+            with self._call_lock:
+                if self._current_call is call:
+                    self._current_call = None
+            # Signal that this stream is done
+            _done_event.set()
+
+    def _handle_response(self, response: openclaude_pb2.ServerMessage,
+                         request_queue: queue.Queue) -> bool:
+        """Handle a single server response. Returns True if this was a terminal event (done/error)."""
+        event = response.WhichOneof("event")
+        if event == "text_chunk":
+            _stdout_queue.put(response.text_chunk.text)
+        elif event == "tool_start":
+            _stdout_queue.put(f"[Tool: {response.tool_start.tool_name}]")
+        elif event == "tool_result":
+            out = response.tool_result.output
+            if len(out) > 300:
+                out = out[:300] + "..."
+            prefix = "ERR" if response.tool_result.is_error else "OK"
+            _stdout_queue.put(f"[{prefix} Result] {out}")
+        elif event == "action_required":
+            ar = response.action_required
+            if ar.type == openclaude_pb2.ActionRequired.CONFIRM_COMMAND:
+                request_queue.put(openclaude_pb2.ClientMessage(
+                    input=openclaude_pb2.UserInput(
+                        reply="y",
+                        prompt_id=ar.prompt_id
+                    )
+                ))
+                _stdout_queue.put(f"[Auto-approved] {ar.question}")
+            else:
+                _stdout_queue.put(f"[Needs input] {ar.question}")
+        elif event == "done":
+            _stdout_queue.put(
+                f"[Done | tokens: {response.done.prompt_tokens} -> {response.done.completion_tokens}]"
+            )
+            return True
+        elif event == "error":
+            _stdout_queue.put(f"[Error] {response.error.message}")
+            return True
+        return False
+
+    def cancel(self) -> None:
+        """Cancel the current in-flight gRPC stream."""
+        with self._call_lock:
+            if self._current_call:
+                try:
+                    self._current_call.cancel()
+                except Exception:
+                    pass
+                self._current_call = None
+
     def is_alive(self) -> bool:
-        proc = _claude_process
-        return proc is not None and proc.poll() is None
+        if not self.channel:
+            return False
+        try:
+            return self.channel.get_state(try_to_connect=False) == grpc.ChannelConnectivity.READY
+        except Exception:
+            return False
 
     def terminate(self) -> None:
-        global _claude_process
         self._running = False
-        proc = _claude_process
-        if proc:
-            try:
-                proc.terminate()
-                proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-        _claude_process = None
+        with self._call_lock:
+            if self._current_call:
+                try:
+                    self._current_call.cancel()
+                except Exception:
+                    pass
+        if self.channel:
+            self.channel.close()
+        print("[gRPC] Disconnected.")
 
 
 # Queue visible to both threads; holds stdout lines for the UI
 _stdout_queue: queue.Queue = queue.Queue()
+# Event signaled when a gRPC response stream finishes (done/error)
+_done_event: threading.Event = threading.Event()
 
 
 # ============================================================================
@@ -185,161 +303,234 @@ _stdout_queue: queue.Queue = queue.Queue()
 
 class NeuralSightWindow(ctk.CTk):
     """
-    Main CustomTkinter window hosting:
-      - A compact "pill" at the top with state label + RMS waveform bars
-      - A dark read-only textbox below that streams Claude's stdout live
+    Compact floating pill widget — modern, translucent, centered-bottom.
+    Shows state + live waveform bars. Console output goes to terminal only.
     """
 
     STATE_COLORS = {
-        "SLEEPING":   "#1E1E1E",
-        "LISTENING":  "#1E6FD9",
-        "PROCESSING": "#1E8C4A",
-        "EXECUTING":  "#7B3FD9",
-        "ERROR":      "#C0392B",
+        "SLEEPING":   "#18181B",   # zinc-900
+        "LISTENING":  "#2563EB",   # blue-600
+        "PROCESSING": "#059669",   # emerald-600
+        "EXECUTING":  "#7C3AED",   # violet-600
+        "ERROR":      "#DC2626",   # red-600
     }
+    STATE_GLOW = {
+        "SLEEPING":   "#3F3F46",   # zinc-700
+        "LISTENING":  "#3B82F6",   # blue-500
+        "PROCESSING": "#10B981",   # emerald-500
+        "EXECUTING":  "#8B5CF6",   # violet-500
+        "ERROR":      "#EF4444",   # red-500
+    }
+
+    WIN_W, WIN_H = 380, 52
 
     def __init__(self):
         super().__init__()
 
-        # ── Window chrome ────────────────────────────────────────────────────
+        # ── Window chrome ────────────────────────────────────────────────
         self.title("NeuralSight")
-        self.geometry("620x280")
-        self.attributes("-topmost", True)
         self.overrideredirect(True)
-        self.configure(fg_color="#0D0D0D")
+        self.attributes("-topmost", True)
+        self.configure(fg_color="#09090B")
 
-        # Force center-bottom placement
+        # Transparency (85% opaque)
+        self.attributes("-alpha", 0.88)
+
+        # Center-bottom placement
         self.update_idletasks()
         sw = self.winfo_screenwidth()
         sh = self.winfo_screenheight()
-        x = (sw - 620) // 2
-        y = sh - 310
-        self.geometry(f"620x280+{x}+{y}")
+        x = (sw - self.WIN_W) // 2
+        y = sh - self.WIN_H - 60     # 60px above taskbar
+        self.geometry(f"{self.WIN_W}x{self.WIN_H}+{x}+{y}")
 
-        # ── Pill row ───────────────────────────────────────────────────────────
+        # ── Pill container ─────────────────────────────────────────────────
         self.pill = ctk.CTkFrame(
             self,
-            corner_radius=28,
+            corner_radius=26,
             fg_color=self.STATE_COLORS["SLEEPING"],
-            height=56
+            border_width=1,
+            border_color="#27272A",   # zinc-800 subtle border
+            height=self.WIN_H
         )
-        self.pill.pack(fill="x", padx=8, pady=(8, 4))
+        self.pill.pack(fill="both", expand=True, padx=0, pady=0)
         self.pill.pack_propagate(False)
 
-        self.state_label = ctk.CTkLabel(
-            self.pill, text="Initializing...",
-            font=("Consolas", 13, "bold"), text_color="white"
-        )
-        self.state_label.pack(side="left", padx=(16, 8), pady=0, fill="none")
-
-        # Waveform canvas (right side of pill)
-        self.waveform = ctk.CTkCanvas(
-            self.pill, width=160, height=44,
+        # ── Status dot (small circle indicator) ─────────────────────────────
+        self.dot_canvas = ctk.CTkCanvas(
+            self.pill, width=10, height=10,
             bg=self.STATE_COLORS["SLEEPING"],
             highlightthickness=0, insertwidth=0
         )
-        self.waveform.pack(side="right", padx=(0, 14), pady=0)
+        self.dot_canvas.pack(side="left", padx=(18, 6), pady=0)
+        self._dot_id = self.dot_canvas.create_oval(1, 1, 9, 9, fill="#3F3F46", outline="")
+
+        # ── State label ──────────────────────────────────────────────────────
+        self.state_label = ctk.CTkLabel(
+            self.pill, text="Say 'Josh'",
+            font=("Poppins", 12, "bold"), text_color="#A1A1AA"   # zinc-400
+        )
+        self.state_label.pack(side="left", padx=(0, 4), pady=0)
+
+        # ── Waveform canvas (right side) ─────────────────────────────────────
+        self._wave_canvas_w = 120
+        self._wave_canvas_h = 36
+        self.waveform = ctk.CTkCanvas(
+            self.pill,
+            width=self._wave_canvas_w,
+            height=self._wave_canvas_h,
+            bg=self.STATE_COLORS["SLEEPING"],
+            highlightthickness=0, insertwidth=0
+        )
+        self.waveform.pack(side="right", padx=(0, 16), pady=0)
+
         self._wave_rms = 0.0
         self._wave_lock = threading.Lock()
+        self._current_state = "SLEEPING"
 
-        # ── Console textbox ────────────────────────────────────────────────────
-        self.console = ctk.CTkTextbox(
-            self,
-            font=("Consolas", 10),
-            fg_color="#111111",
-            text_color="#00FF88",
-            border_width=0,
-            state="disabled",
-            wrap="word"
-        )
-        self.console.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        # Waveform bar history for smooth animation
+        self._num_bars = 9
+        self._bar_heights = [0.0] * self._num_bars
+        self._target_heights = [0.0] * self._num_bars
 
-        # Tag styling for console
-        self.console.tag_config("stdout", foreground="#00FF88")
-        self.console.tag_config("stderr", foreground="#FF6B6B")
+        # ── Idle breathing animation ─────────────────────────────────────────
+        self._breathing_phase = 0.0
+        self._animate()
 
-        # Start polling stdout queue
-        self._poll_stdout()
-
-        # ── Keyboard shortcut: Escape to close ─────────────────────────────────
+        # ── Keyboard + drag ──────────────────────────────────────────────────
         self.bind("<Escape>", lambda e: self._quit())
         self.protocol("WM_DELETE_WINDOW", self._quit)
 
-        self.set_state("SLEEPING", "Say 'computer' to wake...")
+        self.pill.bind("<Button-1>", self._on_mouse_down)
+        self.pill.bind("<B1-Motion>", self._on_mouse_drag)
+
+        self.set_state("SLEEPING", "Say 'Josh'")
+
+        # Start polling stdout queue for log forwarding
+        self._poll_stdout()
 
     # --------------------------------------------------------------------------
-    # State & waveform
+    # State
     # --------------------------------------------------------------------------
     def set_state(self, state: str, message: str) -> None:
-        color = self.STATE_COLORS.get(state, self.STATE_COLORS["SLEEPING"])
-        self.after(0, self._update_state, state, color, message)
+        self.after(0, self._update_state, state, message)
 
-    def _update_state(self, state: str, color: str, message: str) -> None:
-        self.pill.configure(fg_color=color)
+    def _update_state(self, state: str, message: str) -> None:
+        self._current_state = state
+        color = self.STATE_COLORS.get(state, self.STATE_COLORS["SLEEPING"])
+        glow = self.STATE_GLOW.get(state, self.STATE_GLOW["SLEEPING"])
+        self.pill.configure(fg_color=color, border_color=glow)
         self.state_label.configure(text=message)
         self.waveform.configure(bg=color)
-        if state != "LISTENING":
-            self._clear_wave()
+        self.dot_canvas.configure(bg=color)
+        self.dot_canvas.itemconfig(self._dot_id, fill=glow)
 
+        # Text color: bright white when active, muted when sleeping
+        txt_color = "#FAFAFA" if state != "SLEEPING" else "#A1A1AA"
+        self.state_label.configure(text_color=txt_color)
+
+        if state not in ("LISTENING",):
+            self._target_heights = [0.0] * self._num_bars
+
+    # --------------------------------------------------------------------------
+    # Waveform animation
+    # --------------------------------------------------------------------------
     def update_waveform(self, rms: float) -> None:
-        """Called from audio thread; stores value and schedules redraw."""
         with self._wave_lock:
             self._wave_rms = rms
-        self.after(0, self._draw_wave)
 
-    def _draw_wave(self) -> None:
+    def _animate(self) -> None:
+        """30fps animation loop: smooth waveform + idle breathing."""
+        import math
+
+        state = self._current_state
         with self._wave_lock:
             rms = self._wave_rms
 
+        cw = self._wave_canvas_w
+        ch = self._wave_canvas_h
+
+        if state == "LISTENING" and rms > 0.01:
+            # Live waveform from microphone RMS
+            import random
+            for i in range(self._num_bars):
+                center_factor = 0.3 + 0.7 * (1 - abs(i - self._num_bars // 2) / (self._num_bars // 2 + 0.01))
+                jitter = random.uniform(0.7, 1.3)
+                self._target_heights[i] = min(1.0, rms * center_factor * jitter * 2.5)
+        elif state == "SLEEPING":
+            # Gentle breathing wave
+            self._breathing_phase += 0.06
+            for i in range(self._num_bars):
+                phase_offset = i * 0.45
+                val = 0.08 + 0.06 * math.sin(self._breathing_phase + phase_offset)
+                self._target_heights[i] = val
+        elif state in ("PROCESSING", "EXECUTING"):
+            # Pulsing scanner effect
+            self._breathing_phase += 0.12
+            for i in range(self._num_bars):
+                phase_offset = i * 0.7
+                val = 0.15 + 0.25 * abs(math.sin(self._breathing_phase + phase_offset))
+                self._target_heights[i] = val
+
+        # Smooth lerp toward targets
+        for i in range(self._num_bars):
+            self._bar_heights[i] += (self._target_heights[i] - self._bar_heights[i]) * 0.3
+
+        # Draw bars
         self.waveform.delete("bar")
+        bar_w = 6
+        gap = 5
+        total_w = self._num_bars * bar_w + (self._num_bars - 1) * gap
+        start_x = (cw - total_w) // 2
+        glow = self.STATE_GLOW.get(state, "#71717A")
+        bar_color = "#FAFAFA" if state == "LISTENING" else glow
 
-        num_bars = 7
-        canvas_w = 160
-        canvas_h = 44
-        bar_w = 14
-        gap = 6
-        total = num_bars * bar_w + (num_bars - 1) * gap
-        start_x = (canvas_w - total) // 2
-
-        for i in range(num_bars):
-            # Height shaped by RMS with centre bars taller
-            factor = 0.3 + 0.7 * (1 - abs(i - num_bars // 2) / (num_bars // 2 + 0.01))
-            h = max(3, int(canvas_h * rms * factor))
+        for i in range(self._num_bars):
+            h = max(3, int(ch * 0.85 * self._bar_heights[i]))
             x0 = start_x + i * (bar_w + gap)
-            y0 = (canvas_h - h) // 2
+            y0 = (ch - h) // 2
+            # Rounded bar via oval caps + rectangle body
+            r = min(bar_w // 2, 3)
             self.waveform.create_rectangle(
-                x0, y0, x0 + bar_w, y0 + h,
-                fill="#FFFFFF", outline="", tags="bar"
+                x0, y0 + r, x0 + bar_w, y0 + h - r,
+                fill=bar_color, outline="", tags="bar"
+            )
+            self.waveform.create_oval(
+                x0, y0, x0 + bar_w, y0 + 2 * r,
+                fill=bar_color, outline="", tags="bar"
+            )
+            self.waveform.create_oval(
+                x0, y0 + h - 2 * r, x0 + bar_w, y0 + h,
+                fill=bar_color, outline="", tags="bar"
             )
 
-    def _clear_wave(self) -> None:
-        self.waveform.delete("bar")
+        self.after(33, self._animate)   # ~30fps
 
     # --------------------------------------------------------------------------
-    # Console output (stdout reader thread → UI)
+    # Console output → show latest line in pill during EXECUTING
     # --------------------------------------------------------------------------
     def _poll_stdout(self) -> None:
-        """Polls _stdout_queue every 50ms; appends lines to CTkTextbox."""
+        last_line = None
         try:
             while True:
                 line = _stdout_queue.get_nowait()
-                self._append_console(line.rstrip("\n"))
+                if line and line.strip():
+                    last_line = line.strip()
         except queue.Empty:
             pass
+        # Show latest output line in the pill when executing
+        if last_line and self._current_state in ("EXECUTING", "PROCESSING"):
+            # Truncate to fit pill width
+            display = last_line[:42] + ("..." if len(last_line) > 42 else "")
+            self.state_label.configure(text=display)
         self.after(50, self._poll_stdout)
 
-    def _append_console(self, text: str) -> None:
-        self.console.configure(state="normal")
-        self.console.insert("end", text + "\n", "stdout")
-        self.console.see("end")
-        self.console.configure(state="disabled")
-
     def log(self, text: str) -> None:
-        """Add a debug/info line to the console from any thread."""
-        self.after(0, self._append_console, text)
+        """Forward to terminal stdout only."""
+        pass
 
     # --------------------------------------------------------------------------
-    # Drag to move (click pill, drag anywhere on window)
+    # Drag to move
     # --------------------------------------------------------------------------
     def _on_mouse_down(self, event) -> None:
         self._drag_x = event.x
@@ -349,7 +540,7 @@ class NeuralSightWindow(ctk.CTk):
         dx = event.x - self._drag_x
         dy = event.y - self._drag_y
         g = self.geometry()
-        sign, xs, ys = g.split("+")
+        _, xs, ys = g.split("+")
         x = int(xs) + dx
         y = int(ys) + dy
         self.geometry(f"+{x}+{y}")
@@ -389,7 +580,7 @@ class AudioPipeline:
     Thread-safe: all UI calls go through widget.set_state / widget.log / widget.update_waveform.
     """
 
-    def __init__(self, widget: NeuralSightWindow, claude: ClaudeSubprocess):
+    def __init__(self, widget: NeuralSightWindow, claude: OpenClaudeGrpcClient):
         self.widget = widget
         self.claude = claude
         self.recognizer = sr.Recognizer()
@@ -419,7 +610,10 @@ class AudioPipeline:
             t = self.recognizer.energy_threshold
             if t < ENERGY_THRESHOLD_FLOOR:
                 self.recognizer.energy_threshold = ENERGY_THRESHOLD_FLOOR
-            self._print(f"[Mic] Energy threshold: {t:.1f}")
+            # Wait 5s of silence before considering speech done
+            self.recognizer.pause_threshold = PAUSE_AFTER_SPEECH
+            self.recognizer.non_speaking_duration = min(PAUSE_AFTER_SPEECH, 1.0)
+            self._print(f"[Mic] Energy threshold: {t:.1f} | Pause: {PAUSE_AFTER_SPEECH}s")
         except Exception as e:
             self._print(f"[Mic] Calibration warning: {e}")
             self.recognizer.energy_threshold = ENERGY_THRESHOLD_FLOOR
@@ -441,7 +635,7 @@ class AudioPipeline:
     # Main loop
     # --------------------------------------------------------------------------
     def _loop(self) -> None:
-        self.widget.set_state("SLEEPING", "Say 'computer' to wake...")
+        self.widget.set_state("SLEEPING", "Say 'Josh' to wake...")
 
         while self.running:
             try:
@@ -452,60 +646,68 @@ class AudioPipeline:
                 time.sleep(2)
 
     def _listen_for_wake_word(self) -> None:
-        self.widget.set_state("SLEEPING", "Listening for wake word...")
+        self.widget.set_state("SLEEPING", "Say 'Josh'...")
 
         try:
             with self.microphone as source:
-                audio = self.recognizer.listen(source, timeout=5)
+                audio = self.recognizer.listen(source, timeout=3, phrase_time_limit=2)
         except sr.WaitTimeoutError:
             return
         except Exception as e:
             self._print(f"[Mic] Listen error: {e}")
             return
 
-        try:
-            text = self.recognizer.recognize_sphinx(audio)
-        except sr.UnknownValueError:
-            return
-        except Exception as e:
-            self._print(f"[Sphinx] Error: {e}")
-            return
-
+        # Use Groq Whisper instead of PocketSphinx — far more accurate
+        text = self._quick_transcribe(audio)
         if not text:
             return
 
         text_clean = re.sub(r'[^\w\s]', '', text.lower()).strip()
-        words = text_clean.split()
 
-        # ── Word-boundary wake word check ────────────────────────────────────────
-        if not self._wake_word_matches(words):
+        # Check if wake word is anywhere in the transcription
+        if not self._wake_word_matches(text_clean):
             return
 
+        self._print(f"[Wake] Heard: \"{text_clean}\"")
         self._on_wake_word_detected()
 
-    def _wake_word_matches(self, words: list) -> bool:
+    def _quick_transcribe(self, audio_data: sr.AudioData) -> str:
+        """Fast Groq Whisper transcription for wake word detection."""
+        if not self._groq_client:
+            # Fallback to PocketSphinx if no Groq
+            try:
+                return self.recognizer.recognize_sphinx(audio_data)
+            except Exception:
+                return ""
+        try:
+            wav_bytes = audio_data.get_wav_data(convert_rate=16000, convert_width=2)
+            resp = self._groq_client.audio.transcriptions.create(
+                file=("wake.wav", wav_bytes),
+                model=GROQ_MODEL,
+                temperature=0.0,
+                response_format="json"
+            )
+            return resp.text.strip()
+        except Exception:
+            return ""
+
+    def _wake_word_matches(self, text: str) -> bool:
+        """Check if wake word appears anywhere in the transcribed text."""
         for phrase in WAKE_WORD_PHRASES:
-            pw = phrase.split()
-            if len(pw) == 1:
-                if pw[0] in words:
-                    return True
-            else:
-                n = len(pw)
-                for i in range(len(words) - n + 1):
-                    if words[i:i + n] == pw:
-                        return True
+            if phrase in text:
+                return True
         return False
 
     def _on_wake_word_detected(self) -> None:
         self._print("[EVENT] Wake word detected!")
         self._beep()
 
-        time.sleep(0.3)  # let mic buffer flush
+        time.sleep(0.1)  # let mic buffer flush
 
         self.widget.set_state("LISTENING", "Speak your command...")
         audio = self._capture_command()
         if audio is None:
-            self.widget.set_state("SLEEPING", "Say 'computer' to wake...")
+            self.widget.set_state("SLEEPING", "Say 'Josh' to wake...")
             return
 
         self.widget.set_state("PROCESSING", "Transcribing...")
@@ -513,44 +715,127 @@ class AudioPipeline:
         if not transcribed:
             self.widget.set_state("ERROR", "Transcription failed")
             time.sleep(2)
-            self.widget.set_state("SLEEPING", "Say 'computer' to wake...")
+            self.widget.set_state("SLEEPING", "Say 'Josh' to wake...")
             return
 
         self._print(f"[Heard] \"{transcribed}\"")
 
         cmd = PROMPT_TEMPLATE.format(text=transcribed)
-        self.widget.set_state("EXECUTING", f"Running Claude...")
-        success = self.claude.send(cmd)
+        self.widget.set_state("EXECUTING", "Running...")
+
+        # Clear done event before sending so we can wait for completion
+        _done_event.clear()
+        result = self.claude.send(cmd)
+        if isinstance(result, tuple):
+            success, _ = result
+        else:
+            success = result
+
         if success:
-            self._print(f"[CLI] Command sent.")
+            self._print(f"[CLI] Command sent. Waiting for response...")
+            # Wait for completion, but check for voice interrupt every 0.5s
+            self._wait_with_interrupt()
         else:
             self._print("[CLI] Send failed.")
 
-        time.sleep(1)
-        self.widget.set_state("SLEEPING", "Say 'computer' to wake...")
+        time.sleep(0.2)
+        self.widget.set_state("SLEEPING", "Say 'Josh'...")
+
+    def _wait_with_interrupt(self) -> None:
+        """Wait for gRPC response, listening for 'Josh' to interrupt."""
+        while not _done_event.is_set():
+            if _done_event.wait(timeout=0.5):
+                break  # Response finished naturally
+
+            # Quick listen for interrupt wake word
+            try:
+                with self.microphone as source:
+                    audio = self.recognizer.listen(source, timeout=0.3, phrase_time_limit=1.5)
+                text = self._quick_transcribe(audio)
+                if not text:
+                    continue
+                text_lower = text.lower().strip()
+
+                if self._wake_word_matches(text_lower):
+                    self._print(f"[Interrupt] Heard: \"{text_lower}\"")
+                    self._beep(freq=800, dur=80)
+
+                    # Cancel current execution
+                    self.claude.cancel()
+                    _done_event.set()
+                    self._print("[Interrupt] Cancelled current task.")
+
+                    # Check if it's "josh stop" or just "josh" (new command)
+                    if "stop" in text_lower or "cancel" in text_lower:
+                        self._print("[Interrupt] Stopped.")
+                        return
+
+                    # Otherwise listen for new command
+                    time.sleep(0.1)
+                    self.widget.set_state("LISTENING", "New command...")
+                    audio = self._capture_command()
+                    if audio:
+                        self.widget.set_state("PROCESSING", "Transcribing...")
+                        new_cmd = self._transcribe(audio)
+                        if new_cmd:
+                            self._print(f"[Interrupt] New: \"{new_cmd}\"")
+                            cmd = PROMPT_TEMPLATE.format(text=new_cmd)
+                            self.widget.set_state("EXECUTING", "Running...")
+                            _done_event.clear()
+                            self.claude.send(cmd)
+                            continue  # Keep waiting for new response
+                    return
+            except (sr.WaitTimeoutError, Exception):
+                continue
 
     # --------------------------------------------------------------------------
     # Command capture with live RMS waveform
     # --------------------------------------------------------------------------
     def _capture_command(self):
-        """Listen with live RMS bar updates; stop on silence or phrase limit."""
+        """Listen with live RMS waveform animation; stop on silence or phrase limit."""
         self._print("[Recorder] Listening...")
         try:
             with self.microphone as source:
-                # Use a stream-based approach for RMS updates during recording
+                # Start a background thread to feed RMS to waveform
+                self._recording = True
+                rms_thread = threading.Thread(
+                    target=self._rms_monitor, args=(source,), daemon=True
+                )
+                rms_thread.start()
+
                 audio = self.recognizer.listen(
                     source,
                     timeout=None,
-                    phrase_time_limit=15
+                    phrase_time_limit=PHRASE_TIME_LIMIT
                 )
-            self._print("[Recorder] Captured.")
+                self._recording = False
+            self._print(f"[Recorder] Captured.")
             return audio
         except sr.WaitTimeoutError:
+            self._recording = False
             self._print("[Recorder] No speech detected.")
             return None
         except Exception as e:
+            self._recording = False
             self._print(f"[Recorder] Error: {e}")
             return None
+
+    def _rms_monitor(self, source) -> None:
+        """Feed live RMS to the waveform while recording."""
+        import pyaudio
+        stream = source.stream
+        while self._recording:
+            try:
+                # Read a small chunk for RMS calculation
+                if hasattr(stream, 'stream') and stream.stream and stream.stream.is_active():
+                    data = stream.stream.read(1024, exception_on_overflow=False)
+                    rms = rms_from_bytes(data)
+                    self.widget.update_waveform(rms)
+                else:
+                    self.widget.update_waveform(0.15)  # gentle pulse if can't read
+            except Exception:
+                self.widget.update_waveform(0.15)
+            time.sleep(0.05)  # 20fps RMS updates
 
     # --------------------------------------------------------------------------
     # Transcription (Groq primary; local Whisper fallback)
@@ -625,18 +910,8 @@ def main():
 
     window = NeuralSightWindow()
 
-    # ── Bind drag on pill and console ──────────────────────────────────────────
-    window.pill.bind("<Button-1>", window._on_mouse_down)
-    window.pill.bind("<B1-Motion>", window._on_mouse_drag)
-    window.console.bind("<Button-1>", window._on_mouse_down)
-    window.console.bind("<B1-Motion>", window._on_mouse_drag)
-
-    # ── Persistent Claude subprocess ──────────────────────────────────────────
-    try:
-        claude = ClaudeSubprocess()
-    except RuntimeError as e:
-        print(f"[CLI] {e}")
-        sys.exit(1)
+    # ── OpenClaude gRPC client ────────────────────────────────────────────────
+    claude = OpenClaudeGrpcClient()
 
     # ── Audio pipeline (background thread) ──────────────────────────────────────
     pipeline = AudioPipeline(window, claude)
