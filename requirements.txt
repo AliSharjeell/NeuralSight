@@ -1,0 +1,20 @@
+# Voice-to-Terminal Pipeline Dependencies
+# ========================================
+
+# Wake Word Detection (PocketSphinx — offline, no API key)
+SpeechRecognition>=3.16.0   # Uberi SpeechRecognition with PocketSphinx
+pocketsphinx>=5.0.0           # CMU Sphinx PocketSphinx (SpeechRecognition backend)
+pyaudio>=0.2.14               # Audio capture (portaudio bindings)
+
+# Speech-to-Text
+openai-whisper>=20231117      # Local Whisper fallback (if Groq key not set)
+torch>=2.0.0                  # PyTorch with CUDA support (for local Whisper)
+
+# Cloud STT (primary — Groq is faster and more accurate than local Whisper small)
+groq>=0.5.0                   # Groq API for Whisper Large v3 Turbo
+
+# Environment loading
+python-dotenv>=1.0.0          # Load .env file for API keys
+
+# CLI Automation
+pexpect>=4.8.0                # Expect-like subprocess control
