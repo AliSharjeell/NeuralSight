@@ -131,21 +131,21 @@ def mean_or_none(values):
     return None if not values else float(np.mean(values))
 
 
-def render_intro_screen(base_bg: np.ndarray, total_points: int, samples_per_point: int):
+def render_intro_screen(base_bg: np.ndarray, total_points: int, samples_per_point: int, countdown: int = 5):
     canvas = base_bg.copy()
     screen_w = base_bg.shape[1]
     right_margin = 60
     gap = 22
     card2_x = screen_w - right_margin - 220
     card1_x = card2_x - gap - 190
-    
+
     # Header area
     cv2.rectangle(canvas, (56, 54), (840, 350), (27, 24, 24), -1) # Zinc 900
     cv2.rectangle(canvas, (56, 54), (840, 350), (246, 130, 59), 2) # Blue 500
-    
+
     put_text(canvas, "NeuralSight Calibration", (82, 110), 1.2, (250, 250, 250), 2)
     put_text(canvas, "Focus on the dots to calibrate your unique gaze profile.", (82, 152), 0.72, (161, 161, 170), 2)
-    
+
     steps = [
         "1. Sit naturally and keep your head steady.",
         "2. Follow each blue dot until capture finishes.",
@@ -156,9 +156,15 @@ def render_intro_screen(base_bg: np.ndarray, total_points: int, samples_per_poin
 
     draw_metric_card(canvas, card1_x, 70, 190, 96, "Dots", str(total_points), (246, 130, 59))
     draw_metric_card(canvas, card2_x, 70, 220, 96, "Samples / Dot", str(samples_per_point), (92, 206, 132))
-    
-    put_text(canvas, "SPACE to begin", (84, base_bg.shape[0] - 74), 0.84, (250, 250, 250), 2)
-    put_text(canvas, "ESC to cancel", (340, base_bg.shape[0] - 74), 0.84, (113, 113, 122), 2) # Zinc 500
+
+    if countdown > 0:
+        # Show countdown overlay
+        countdown_text = f"Starting in {countdown}..."
+        put_text(canvas, countdown_text, (84, base_bg.shape[0] - 74), 0.84, (250, 250, 250), 2)
+        put_text(canvas, "ESC to cancel", (340, base_bg.shape[0] - 74), 0.84, (113, 113, 122), 2) # Zinc 500
+    else:
+        put_text(canvas, "Go!", (84, base_bg.shape[0] - 74), 0.84, (92, 206, 132), 2)
+        put_text(canvas, "ESC to cancel", (340, base_bg.shape[0] - 74), 0.84, (113, 113, 122), 2)
     return canvas
 
 
@@ -347,15 +353,22 @@ def main():
     cv2.namedWindow("Calibration", cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Calibration", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
-    intro = render_intro_screen(base_bg, len(targets), args.samples_per_point)
+    intro = render_intro_screen(base_bg, len(targets), args.samples_per_point, countdown=5)
     cv2.imshow("Calibration", intro)
+    cv2.waitKey(1)
+
+    countdown_start = time.time()
     while True:
+        elapsed = time.time() - countdown_start
+        remaining = max(0, 5 - int(elapsed))
+        intro = render_intro_screen(base_bg, len(targets), args.samples_per_point, countdown=remaining)
+        cv2.imshow("Calibration", intro)
         key = cv2.waitKey(30) & 0xFF
         if key == 27:
             cap.release()
             cv2.destroyAllWindows()
             return
-        if key == 32:
+        if remaining == 0:
             break
 
     point_records = []
