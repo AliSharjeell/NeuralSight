@@ -1,0 +1,12 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+.venv/
+.venv39/
+
+# Calibration artifacts
+
+# OS
+.DS_Store
+Thumbs.db

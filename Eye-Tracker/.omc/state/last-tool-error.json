@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"python -c \\\"\\nimport mediapipe as mp\\nprint('tasks attrs:', [a for a in dir(mp.tasks) if 'Base' in a or 'base' in a])\\nimport mediapipe.tasks.base_options as bo\\nprint('base_options OK:', ...",
+  "error": "Exit code 1\n2026-04-25 06:30:09.667527: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.\n2026-04-25 06:30:12.293609: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from diff...",
+  "timestamp": "2026-04-25T01:30:15.899Z",
+  "retry_count": 2
+}
