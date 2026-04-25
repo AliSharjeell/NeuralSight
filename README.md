@@ -38,16 +38,49 @@ pip install -r requirements.txt
 ```
 
 ### 2. Setup Environment
-Rename `.env.example` to `.env` and fill in your keys.
-
-### 3. Launch the Suite
-The easiest way to start is using the provided batch script which handles port cleanup and dual-process orchestration:
-```powershell
-.\start_neuralsight.bat
+Rename `.env.example` to `.env` and fill in your keys:
+```
+GROQ_API_KEY=your_groq_api_key_here
 ```
 
-**Manual Execution (for developers):**
-If you prefer running the components separately to see detailed logs:
+### 3. Eye-Tracker Setup
+The Eye-Tracker runs in its own virtual environment. Setup once, then it launches automatically.
+
+```powershell
+cd Eye-Tracker
+python -m venv .venv
+.\.venv\Scripts\activate
+pip install -r requirements.txt
+cd ..
+```
+
+**Eye-Tracker files:**
+- `calibrate.py` — Calibrate your gaze profile (auto-countdown, no keypress needed)
+- `track.py` — Run live eye tracking after calibration
+- `launcher.py` — GUI launcher for both
+
+### 4. Launch the Suite
+Run the full NeuralSight suite with one command:
+```powershell
+.\start.bat
+```
+
+This will:
+1. Start the **OpenClaude gRPC Server** (headless agent backend)
+2. Run **Eye Calibration** (5-second countdown, auto-starts)
+3. Start **Eye Tracking** after calibration completes
+4. Launch the **Voice Interface (Max)** — say "Max" to activate
+
+**Voice commands:**
+- Say `"Max"` — wake word to activate
+- Say `"Max calibrate eye tracking"` — recalibrate eye tracker
+- Say `"Max turn on eye tracking"` — start eye tracking manually
+
+---
+
+## Manual Execution (for developers)
+
+If you prefer running components separately to see detailed logs:
 
 **Terminal 1 (Headless Server):**
 ```powershell
@@ -55,7 +88,21 @@ cd openclaude
 .\start_openclaude_server.ps1
 ```
 
-**Terminal 2 (Voice Interface):**
+**Terminal 2 (Eye Calibration):**
+```powershell
+cd Eye-Tracker
+.\.venv\Scripts\activate
+python calibrate.py
+```
+
+**Terminal 3 (Eye Tracking):**
+```powershell
+cd Eye-Tracker
+.\.venv\Scripts\activate
+python track.py
+```
+
+**Terminal 4 (Voice Interface):**
 ```powershell
 python voice_terminal_pipeline.py
 ```
@@ -72,7 +119,7 @@ python voice_terminal_pipeline.py
 The NeuralSight voice pipeline is engineered for sub-second responsiveness, moving beyond standard linear speech-to-text.
 
 ### 1. The Wake-Word Trigger (Max)
-Our custom keyword spotting engine utilizes a rolling buffer and phonetic aliasing. It does not just listen for the word "Max"; it monitors for a cluster of phonetic signatures (macs, macks, marx, etc.) that indicate user intent even in noisy environments. 
+Our custom keyword spotting engine utilizes a rolling buffer and phonetic aliasing. It does not just listen for the word "Max"; it monitors for a cluster of phonetic signatures (macs, macks, marx, etc.) that indicate user intent even in noisy environments.
 - **Frequency**: The microphone is sampled every 100ms in the background.
 - **VAD (Voice Activity Detection)**: We use a dynamic energy threshold that recalibrates to your room's ambient noise floor in real-time.
 
@@ -82,7 +129,7 @@ Once triggered, the pipeline transitions from a "Spotter" to a "Recorder".
 - **Groq Acceleration**: Raw audio is streamed directly to our high-speed Groq Whisper layer, delivering 100% accurate transcripts in under 200ms.
 
 ### 3. Real-Time Interrupt System
-The architecture is inherently non-blocking. While the agent is executing a multi-step task (like navigating a complex website), a secondary thread maintains the "Neural Monitor." 
+The architecture is inherently non-blocking. While the agent is executing a multi-step task (like navigating a complex website), a secondary thread maintains the "Neural Monitor."
 - **The Baton Pattern**: If you say "Max" while a task is running, the system triggers a gRPC cancellation signal, immediately halting the current process and resetting the state machine for your next command.
 
 ---
@@ -102,11 +149,34 @@ Windows-MCP is a specialized Model Context Protocol suite designed to provide th
 
 ---
 
+## Project Structure
+
+```
+NeuralSight/
+├── start.bat                      # Full suite launcher (server + calibration + tracking + voice)
+├── start_neuralsight.bat          # Alternative launcher
+├── voice_terminal_pipeline.py     # Voice UI + gRPC client + wake word detection
+├── requirements.txt                # Python dependencies
+├── .env                            # API keys (not committed)
+├── openclaude/                     # OpenClaude gRPC server (git submodule)
+│   ├── start_openclaude_server.ps1
+│   └── ...
+└── Eye-Tracker/                    # Eye tracking module
+    ├── calibrate.py                # Calibration with 5s auto-countdown
+    ├── track.py                    # Live eye tracking
+    ├── launcher.py                 # GUI launcher
+    ├── requirements.txt            # Eye-Tracker dependencies
+    └── .venv/                      # Virtual environment (not committed)
+```
+
+---
+
 ## Key Technologies
 - **OpenClaude**: Headless gRPC server for agentic computer control.
 - **Groq Whisper**: Ultra-low latency voice transcription (whisper-large-v3-turbo).
 - **Windows-MCP**: Direct system integration for 91+ specialized tools (Files, Registry, Browser, UI).
 - **CustomTkinter**: Premium, hardware-accelerated Python UI.
+- **MediaPipe**: Real-time face mesh and gaze tracking.
 
 ---
 
