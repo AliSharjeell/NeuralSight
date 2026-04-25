@@ -15,8 +15,8 @@ Millions of people with upper limb amputations or severe motor impairments can't
 ### 1. Zero-Hardware Eyetracking
 We use lightweight computer vision running locally to track your gaze. Wherever you look on the screen, your pointer follows. An intentional blink is your click. It is fluid, real-time, and completely eliminates the need for a physical mouse.
 
-### 2. Agentic 'Computer Use'
-For typing and complex tasks, we built **Max**—an autonomous, multimodal AI agent that visually interprets the screen's GUI. Give it a voice command, and the agent takes over. It navigates the OS, reasons through application states, and fills out input fields—bypassing the keyboard entirely. It can even execute intricate system tasks that the user might not know how to do themselves.
+### 2. Agentic Computer Use
+For typing and complex tasks, we built **Max** -- an autonomous, multimodal AI agent that visually interprets the screen's GUI. Give it a voice command, and the agent takes over. It navigates the OS, reasons through application states, and fills out input fields -- bypassing the keyboard entirely. It can even execute intricate system tasks that the user might not know how to do themselves.
 
 ---
 
@@ -95,7 +95,7 @@ We have architected a next-generation "headless" control layer that bridges the 
 OpenClaude is our custom-built gRPC server. It does not just generate text; it maintains a persistent, stateful session that can "see" and "reason" about the GUI. It acts as the central nervous system, receiving processed voice transcripts and translating them into high-level system strategies.
 
 ### Windows-MCP: The Next-Level Toolkit
-To give the agent true autonomy, we developed **Windows-MCP**—a specialized Model Context Protocol suite. This is not a simple automation bridge; it is a deep integration into the Windows OS including:
+To give the agent true autonomy, we developed **Windows-MCP** -- a specialized Model Context Protocol suite. This is not a simple automation bridge; it is a deep integration into the Windows OS including:
 - **UI Vision Layer**: Allows the agent to snapshot the accessibility tree and visually understand button hierarchies, input fields, and layout states.
 - **Kernel-Level Control**: Direct hooks into the process manager, registry, and filesystem for complex system tasks.
 - **Browser Prioritization**: A custom logic layer that forces browser interactions to occur via the address bar (ctrl+l), bypassing the unreliability of on-page search boxes.
