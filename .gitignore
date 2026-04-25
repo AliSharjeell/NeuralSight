@@ -4,6 +4,9 @@
 .env.*.local
 !.env.example
 
+# Eye-Tracker specific
+Eye-Tracker/.venv39/
+
 # Python
 __pycache__/
 *.py[cod]
