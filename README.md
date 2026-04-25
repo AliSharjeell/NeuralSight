@@ -67,6 +67,41 @@ python voice_terminal_pipeline.py
 - **Interruptible**: Say "Max" or "Max, stop" at any time during execution to cancel or redirect the current task.
 - **Visual Feedback**: A floating, modern pill UI provides real-time waveform feedback and natural language status updates (e.g., "Thinking...", "Working on it...").
 
+## Neural Architecture: Voice Flow and Triggers
+
+The NeuralSight voice pipeline is engineered for sub-second responsiveness, moving beyond standard linear speech-to-text.
+
+### 1. The Wake-Word Trigger (Max)
+Our custom keyword spotting engine utilizes a rolling buffer and phonetic aliasing. It does not just listen for the word "Max"; it monitors for a cluster of phonetic signatures (macs, macks, marx, etc.) that indicate user intent even in noisy environments. 
+- **Frequency**: The microphone is sampled every 100ms in the background.
+- **VAD (Voice Activity Detection)**: We use a dynamic energy threshold that recalibrates to your room's ambient noise floor in real-time.
+
+### 2. The Command Capture Loop
+Once triggered, the pipeline transitions from a "Spotter" to a "Recorder".
+- **Dynamic Pause Threshold**: We implemented a 2-second logic buffer. If you pause mid-sentence to think, Max stays active, only closing the recording session when a sustained silence is detected.
+- **Groq Acceleration**: Raw audio is streamed directly to our high-speed Groq Whisper layer, delivering 100% accurate transcripts in under 200ms.
+
+### 3. Real-Time Interrupt System
+The architecture is inherently non-blocking. While the agent is executing a multi-step task (like navigating a complex website), a secondary thread maintains the "Neural Monitor." 
+- **The Baton Pattern**: If you say "Max" while a task is running, the system triggers a gRPC cancellation signal, immediately halting the current process and resetting the state machine for your next command.
+
+---
+
+## The Core: OpenClaude and Windows-MCP
+
+We have architected a next-generation "headless" control layer that bridges the gap between LLM reasoning and the Windows Kernel.
+
+### OpenClaude: The Agentic Brain
+OpenClaude is our custom-built gRPC server. It does not just generate text; it maintains a persistent, stateful session that can "see" and "reason" about the GUI. It acts as the central nervous system, receiving processed voice transcripts and translating them into high-level system strategies.
+
+### Windows-MCP: The Next-Level Toolkit
+To give the agent true autonomy, we developed **Windows-MCP**—a specialized Model Context Protocol suite. This is not a simple automation bridge; it is a deep integration into the Windows OS including:
+- **UI Vision Layer**: Allows the agent to snapshot the accessibility tree and visually understand button hierarchies, input fields, and layout states.
+- **Kernel-Level Control**: Direct hooks into the process manager, registry, and filesystem for complex system tasks.
+- **Browser Prioritization**: A custom logic layer that forces browser interactions to occur via the address bar (ctrl+l), bypassing the unreliability of on-page search boxes.
+
+---
+
 ## Key Technologies
 - **OpenClaude**: Headless gRPC server for agentic computer control.
 - **Groq Whisper**: Ultra-low latency voice transcription (whisper-large-v3-turbo).
