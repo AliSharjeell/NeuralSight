@@ -1,3 +1,5 @@
+![NeuralSight Max](NeuralSightMax.png)
+
 # NeuralSight: Max
 
 **Bridging the gap between human intent and digital autonomy.**
@@ -8,15 +10,17 @@ Millions of people with upper limb amputations or severe motor impairments can't
 
 ---
 
-## 🚀 The Vision
+## The Vision
 
 ### 1. Zero-Hardware Eyetracking
-We use lightweight computer vision running locally to track your gaze. Wherever you look on the screen, your pointer follows. An intentional blink is your click. It’s fluid, real-time, and completely eliminates the need for a physical mouse.
+We use lightweight computer vision running locally to track your gaze. Wherever you look on the screen, your pointer follows. An intentional blink is your click. It is fluid, real-time, and completely eliminates the need for a physical mouse.
 
 ### 2. Agentic 'Computer Use'
 For typing and complex tasks, we built **Max**—an autonomous, multimodal AI agent that visually interprets the screen's GUI. Give it a voice command, and the agent takes over. It navigates the OS, reasons through application states, and fills out input fields—bypassing the keyboard entirely. It can even execute intricate system tasks that the user might not know how to do themselves.
 
-## 📋 Prerequisites
+---
+
+## Prerequisites
 Before you clone and run, ensure you have the following installed:
 - **Python 3.10+**: Core logic and UI.
 - **Bun**: Required to run the OpenClaude gRPC server.
@@ -24,9 +28,9 @@ Before you clone and run, ensure you have the following installed:
 
 ---
 
-## 🛠️ Getting Started
+## Getting Started
 
-### 1. Clone & Install
+### 1. Clone and Install
 ```powershell
 git clone <your-repo-url>
 cd NeuralSight
@@ -35,13 +39,8 @@ pip install -r requirements.txt
 
 ### 2. Setup Environment
 Rename `.env.example` to `.env` and fill in your keys.
-```env
-GROQ_API_KEY=your_groq_key
-ANTHROPIC_API_KEY=your_minimax_or_anthropic_key
-ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic
-```
 
-### 2. Launch the Suite
+### 3. Launch the Suite
 The easiest way to start is using the provided batch script which handles port cleanup and dual-process orchestration:
 ```powershell
 .\start_neuralsight.bat
@@ -63,14 +62,14 @@ python voice_terminal_pipeline.py
 
 ---
 
-## 🎙️ Voice Interaction
-- **Wake Word**: Say `"Max"` to activate the assistant.
-- **Interruptible**: Say `"Max"` or `"Max, stop"` at any time during execution to cancel or redirect the current task.
-- **Visual Feedback**: A floating, modern pill UI provides real-time waveform feedback and natural language status updates (e.g., *"Thinking..."*, *"Working on it..."*).
+## Voice Interaction
+- **Wake Word**: Say "Max" to activate the assistant.
+- **Interruptible**: Say "Max" or "Max, stop" at any time during execution to cancel or redirect the current task.
+- **Visual Feedback**: A floating, modern pill UI provides real-time waveform feedback and natural language status updates (e.g., "Thinking...", "Working on it...").
 
-## 🧩 Key Technologies
+## Key Technologies
 - **OpenClaude**: Headless gRPC server for agentic computer control.
-- **Groq Whisper**: Ultra-low latency voice transcription (`whisper-large-v3-turbo`).
+- **Groq Whisper**: Ultra-low latency voice transcription (whisper-large-v3-turbo).
 - **Windows-MCP**: Direct system integration for 91+ specialized tools (Files, Registry, Browser, UI).
 - **CustomTkinter**: Premium, hardware-accelerated Python UI.
 
