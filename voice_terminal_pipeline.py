@@ -752,6 +752,19 @@ class AudioPipeline:
                 return
 
             self.widget.set_user_prompt(transcribed)
+            
+            # --- INTERNAL COMMAND HANDLING (Eye Tracking) ---
+            t_lower = transcribed.lower().strip()
+            if "calibrate" in t_lower and "eye" in t_lower:
+                self.widget.set_state("EXECUTING", "Calibrating...")
+                self._run_eye_tracker(mode="calibrate")
+                return
+            elif "tracking" in t_lower and ("turn on" in t_lower or "start" in t_lower or "load" in t_lower):
+                self.widget.set_state("EXECUTING", "Tracking...")
+                self._run_eye_tracker(mode="track")
+                return
+            # -----------------------------------------------
+
             cmd = PROMPT_TEMPLATE.format(text=transcribed)
             self.widget.set_state("EXECUTING", "Working on it...")
 
@@ -833,6 +846,41 @@ class AudioPipeline:
                 self._print(f"[Interrupt] Error: {e}")
                 continue
         return "DONE"
+
+    def _run_eye_tracker(self, mode="calibrate") -> None:
+        """Launch eye tracker scripts as background processes."""
+        def worker():
+            try:
+                base_path = os.path.join(os.getcwd(), "Eye-Tracker")
+                if mode == "calibrate":
+                    script = os.path.join(base_path, "calibrate.py")
+                    self._print(f"[EyeTracker] Starting Calibration: {script}")
+                    # Run calibration and WAIT for it to finish
+                    proc = subprocess.run([sys.executable, script], cwd=base_path)
+                    
+                    if proc.returncode == 0:
+                        self._print("[EyeTracker] Calibration complete. Starting Tracking...")
+                        self.widget.after(0, lambda: self.widget.set_state("EXECUTING", "Tracking..."))
+                        # Launch tracking as a new process (non-blocking)
+                        track_script = os.path.join(base_path, "track.py")
+                        subprocess.Popen([sys.executable, track_script], cwd=base_path)
+                    else:
+                        self._print(f"[EyeTracker] Calibration failed with code {proc.returncode}")
+                        self.widget.after(0, lambda: self.widget.set_state("ERROR", "Calibration failed"))
+                else:
+                    script = os.path.join(base_path, "track.py")
+                    self._print(f"[EyeTracker] Starting Tracking: {script}")
+                    subprocess.Popen([sys.executable, script], cwd=base_path)
+                
+                time.sleep(2)
+                self.widget.after(0, lambda: self.widget.set_state("SLEEPING", "Ready"))
+            except Exception as e:
+                self._print(f"[EyeTracker] Launch Error: {e}")
+                self.widget.after(0, lambda: self.widget.set_state("ERROR", "Launch failed"))
+                time.sleep(2)
+                self.widget.after(0, lambda: self.widget.set_state("SLEEPING", "Ready"))
+
+        threading.Thread(target=worker, daemon=True).start()
     # --------------------------------------------------------------------------
     # Command capture with live RMS waveform
     # --------------------------------------------------------------------------
