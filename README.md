@@ -89,13 +89,13 @@ The architecture is inherently non-blocking. While the agent is executing a mult
 
 ## The Core: OpenClaude and Windows-MCP
 
-We have architected a next-generation "headless" control layer that bridges the gap between LLM reasoning and the Windows Kernel.
+The architecture utilizes a next-generation "headless" control layer that bridges the gap between LLM reasoning and the Windows Kernel.
 
 ### OpenClaude: The Agentic Brain
-OpenClaude is our custom-built gRPC server. It does not just generate text; it maintains a persistent, stateful session that can "see" and "reason" about the GUI. It acts as the central nervous system, receiving processed voice transcripts and translating them into high-level system strategies.
+OpenClaude is a stateful gRPC server. It does not just generate text; it maintains a persistent session that can "see" and "reason" about the GUI. It acts as the central nervous system, receiving processed voice transcripts and translating them into high-level system strategies.
 
 ### Windows-MCP: The Next-Level Toolkit
-To give the agent true autonomy, we developed **Windows-MCP** -- a specialized Model Context Protocol suite. This is not a simple automation bridge; it is a deep integration into the Windows OS including:
+Windows-MCP is a specialized Model Context Protocol suite designed to provide the agent with total digital autonomy. This is not a simple automation bridge; it is a deep integration into the Windows OS including:
 - **UI Vision Layer**: Allows the agent to snapshot the accessibility tree and visually understand button hierarchies, input fields, and layout states.
 - **Kernel-Level Control**: Direct hooks into the process manager, registry, and filesystem for complex system tasks.
 - **Browser Prioritization**: A custom logic layer that forces browser interactions to occur via the address bar (ctrl+l), bypassing the unreliability of on-page search boxes.
