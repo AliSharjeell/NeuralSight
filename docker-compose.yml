@@ -6,6 +6,7 @@ services:
       - GROQ_API_KEY=${GROQ_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL}
+      - GROQ_WHISPER_MODEL=${GROQ_WHISPER_MODEL}
     devices:
       - /dev/video0:/dev/video0
     volumes:
