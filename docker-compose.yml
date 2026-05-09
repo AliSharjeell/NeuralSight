@@ -1,35 +1,4 @@
 services:
-  # Full NeuralSight suite (equivalent to start.bat)
-  neuralsight:
-    build: .
-    container_name: neuralsight-max
-    env_file:
-      - .env
-    environment:
-      - GROQ_WHISPER_MODEL=${GROQ_WHISPER_MODEL:-whisper-large-v3-turbo}
-    devices:
-      - /dev/video0:/dev/video0
-    volumes:
-      - ./openclaude/dist:/app/openclaude/dist:ro
-      - ./.env:/app/.env:ro
-    stdin_open: true
-    tty: true
-    network_mode: host
-    command: python start.bat
-
-  # Voice only (equivalent to start_neuralsight.bat)
-  voice:
-    build: .
-    container_name: neuralsight-voice
-    env_file:
-      - .env
-    environment:
-      - GROQ_WHISPER_MODEL=${GROQ_WHISPER_MODEL:-whisper-large-v3-turbo}
-    stdin_open: true
-    tty: true
-    network_mode: host
-    command: python voice_terminal_pipeline.py
-
   # Eye calibration only
   calibrate:
     build: .
