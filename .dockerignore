@@ -1,7 +1,6 @@
 # Git
-.git
+.git/
 .gitignore
-.gitmodules
 
 # Python
 __pycache__/
@@ -26,7 +25,6 @@ Eye-Tracker/.venv39/
 .env
 .env.local
 .env.*.local
-*.log
 neuralsight.log
 
 # IDE / OS
@@ -34,11 +32,6 @@ neuralsight.log
 .idea/
 *.DS_Store
 Thumbs.db
-__pycache__/
-
-# OpenClaude build artifacts (rebuild inside container)
-openclaude/dist/
-openclaude/node_modules/
 
 # Temporary files
 *.wav
@@ -56,11 +49,15 @@ openclaude/node_modules/
 *.pth
 *.pt
 *.onnx
+*.bin
 
-# Documentation (not needed in image)
+# Documentation (keep README.md)
 *.md
 !README.md
 
-# CI/CD
-.github/workflows/
-.github/ISSUE_TEMPLATE/
+# CI/CD (not needed in container)
+.github/
+
+# Pre-built dist (rebuilt in Docker)
+# Do NOT exclude openclaude/dist/ - it's copied from build stage
+# Do NOT exclude openclaude/node_modules/ - it's copied from build stage

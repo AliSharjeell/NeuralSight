@@ -1,5 +1,30 @@
 # NeuralSight Max - Docker Container
+# Works on fresh PC with just Docker installed
 
+# ---- Build Stage ----
+FROM node:22-slim AS openclaude-build
+
+# Install Bun
+RUN npm install -g bun@1.3.11
+
+WORKDIR /app
+
+# Copy dependency manifests first for better layer caching
+COPY openclaude/package.json openclaude/bun.lock ./
+
+# Install all dependencies
+RUN bun install --frozen-lockfile
+
+# Copy OpenClaude source
+COPY openclaude/src/ openclaude/src/
+COPY openclaude/scripts/ openclaude/scripts/
+COPY openclaude/bin/ openclaude/bin/
+COPY openclaude/tsconfig.json openclaude/
+
+# Build OpenClaude
+RUN bun run build
+
+# ---- Final Stage ----
 FROM python:3.11-slim
 
 # Set environment variables
@@ -8,18 +33,17 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install system dependencies (including build tools for Python packages)
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
-    wget \
     sox \
     libsox-fmt-mp3 \
     portaudio19-dev \
     libportaudio2 \
     libasound2-dev \
-    libssl-dev \
-    libffi-dev \
+    libssl3 \
+    libffi8 \
     python3-dev \
     build-essential \
     cmake \
@@ -37,28 +61,23 @@ COPY voice_terminal_pipeline.py .
 COPY start.bat .
 COPY start_neuralsight.bat .
 
-# Copy OpenClaude
-COPY openclaude/ openclaude/
+# Copy built OpenClaude from build stage
+COPY --from=openclaude-build /app/dist /app/openclaude/dist
+COPY --from=openclaude-build /app/bin /app/openclaude/bin
+COPY --from=openclaude-build /app/node_modules /app/openclaude/node_modules
+COPY openclaude/package.json openclaude/
 
 # Copy gRPC proto files
 COPY protos/ protos/
 
-# Install Bun and build OpenClaude
-RUN curl -fsSL https://bun.sh/install | bash
-ENV PATH="/root/.bun/bin:$PATH"
-WORKDIR /app/openclaude
-RUN bun run build
-WORKDIR /app
-
 # Copy Eye-Tracker
 COPY Eye-Tracker/ Eye-Tracker/
 
-# Create .env from example (user should override with real keys)
+# Create .env from example
 COPY .env.example .env
 
 # Expose ports for gRPC server
 EXPOSE 50051
 
 # Entry point - runs the voice interface
-# Note: Camera/audio access requires container to run with --device flags
 CMD ["python", "voice_terminal_pipeline.py"]
