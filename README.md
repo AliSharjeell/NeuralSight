@@ -20,7 +20,7 @@ cd NeuralSight
 
 # Setup environment (copy .env.example and add your keys)
 copy .env.example .env
-notepad .env   # Add your GROQ_API_KEY
+notepad .env   # Add GROQ_API_KEY and ANTHROPIC_API_KEY
 
 docker compose up --build
 ```
@@ -33,7 +33,7 @@ cd NeuralSight
 
 # Setup environment
 copy .env.example .env
-notepad .env   # Add your GROQ_API_KEY
+notepad .env   # Add GROQ_API_KEY and ANTHROPIC_API_KEY
 
 pip install -r requirements.txt
 
