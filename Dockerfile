@@ -49,6 +49,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     pkg-config \
+    tk \
+    libtk8.6 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better layer caching
