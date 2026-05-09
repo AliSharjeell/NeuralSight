@@ -1,16 +1,21 @@
 services:
   neuralsight:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: neuralsight-max
     environment:
       - GROQ_API_KEY=${GROQ_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL}
-      - GROQ_WHISPER_MODEL=${GROQ_WHISPER_MODEL}
+      - GROQ_WHISPER_MODEL=${GROQ_WHISPER_MODEL:-whisper-large-v3-turbo}
+    env_file:
+      - .env
     devices:
       - /dev/video0:/dev/video0
     volumes:
-      - .:/app
+      - ./openclaude/dist:/app/openclaude/dist:ro
+      - ./.env:/app/.env:ro
     stdin_open: true
     tty: true
     network_mode: host
