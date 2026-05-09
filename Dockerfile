@@ -51,6 +51,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     tk \
     libtk8.6 \
+    xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better layer caching
@@ -82,5 +83,5 @@ COPY .env.example .env
 # Expose ports for gRPC server
 EXPOSE 50051
 
-# Entry point - runs the voice interface
-CMD ["python", "voice_terminal_pipeline.py"]
+# Entry point - runs the voice interface with virtual display
+CMD ["xvfb-run", "-a", "python", "voice_terminal_pipeline.py"]
