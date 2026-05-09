@@ -37,8 +37,7 @@ That's it. `start.bat` handles everything: starts the OpenClaude server, runs ey
 For containerized deployment:
 
 ```powershell
-docker build -t neuralsight .
-docker run --device=/dev/video0 -v $(pwd):/app neuralsight
+docker compose up --build
 ```
 
 ---
