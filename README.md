@@ -16,6 +16,12 @@ Millions of people with upper limb amputations or severe motor impairments can't
 git clone <your-repo-url>
 cd NeuralSight
 pip install -r requirements.txt
+
+# Build OpenClaude once
+cd openclaude
+bun run build
+cd ..
+
 python start.bat
 ```
 
