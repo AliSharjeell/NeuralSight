@@ -46,7 +46,13 @@ cd openclaude
 bun run build
 cd ..
 
+# Full suite (same as start.bat)
 python start.bat
+
+# Or run individual components:
+python start_neuralsight.bat   # Voice only
+python Eye-Tracker/calibrate.py  # Eye calibration only
+python Eye-Tracker/track.py       # Eye tracking only
 ```
 
 Docker handles everything automatically. Manual setup gives you more control over each component.
