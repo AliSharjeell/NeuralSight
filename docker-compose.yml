@@ -1,16 +1,12 @@
 services:
+  # Full NeuralSight suite (equivalent to start.bat)
   neuralsight:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     container_name: neuralsight-max
-    environment:
-      - GROQ_API_KEY=${GROQ_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL}
-      - GROQ_WHISPER_MODEL=${GROQ_WHISPER_MODEL:-whisper-large-v3-turbo}
     env_file:
       - .env
+    environment:
+      - GROQ_WHISPER_MODEL=${GROQ_WHISPER_MODEL:-whisper-large-v3-turbo}
     devices:
       - /dev/video0:/dev/video0
     volumes:
@@ -19,4 +15,47 @@ services:
     stdin_open: true
     tty: true
     network_mode: host
+    command: python start.bat
+
+  # Voice only (equivalent to start_neuralsight.bat)
+  voice:
+    build: .
+    container_name: neuralsight-voice
+    env_file:
+      - .env
+    environment:
+      - GROQ_WHISPER_MODEL=${GROQ_WHISPER_MODEL:-whisper-large-v3-turbo}
+    stdin_open: true
+    tty: true
+    network_mode: host
     command: python voice_terminal_pipeline.py
+
+  # Eye calibration only
+  calibrate:
+    build: .
+    container_name: neuralsight-calibrate
+    env_file:
+      - .env
+    devices:
+      - /dev/video0:/dev/video0
+    volumes:
+      - ./.env:/app/.env:ro
+    stdin_open: true
+    tty: true
+    network_mode: host
+    command: python Eye-Tracker/calibrate.py
+
+  # Eye tracking only
+  track:
+    build: .
+    container_name: neuralsight-track
+    env_file:
+      - .env
+    devices:
+      - /dev/video0:/dev/video0
+    volumes:
+      - ./.env:/app/.env:ro
+    stdin_open: true
+    tty: true
+    network_mode: host
+    command: python Eye-Tracker/track.py

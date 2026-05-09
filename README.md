@@ -12,17 +12,21 @@ Millions of people with upper limb amputations or severe motor impairments can't
 
 ## How to Run
 
-### Option 1: Docker (Recommended)
+### Option 1: Docker
 
 ```powershell
 git clone <your-repo-url>
 cd NeuralSight
-
-# Setup environment (copy .env.example and add your keys)
 copy .env.example .env
 notepad .env   # Add GROQ_API_KEY and ANTHROPIC_API_KEY
 
-docker compose up --build
+# Full suite (same as start.bat)
+docker compose up --build neuralsight
+
+# Or run individual services:
+docker compose up --build voice        # Voice only (same as start_neuralsight.bat)
+docker compose up --build calibrate    # Eye calibration only
+docker compose up --build track        # Eye tracking only
 ```
 
 ### Option 2: Manual Setup
