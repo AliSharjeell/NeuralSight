@@ -83,5 +83,5 @@ COPY .env.example .env
 # Expose ports for gRPC server
 EXPOSE 50051
 
-# Entry point - runs the voice interface with virtual display
-CMD ["xvfb-run", "-a", "python", "voice_terminal_pipeline.py"]
+# Entry point - voice interface needs display
+CMD ["python", "voice_terminal_pipeline.py"]
