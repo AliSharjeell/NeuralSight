@@ -10,6 +10,24 @@ Millions of people with upper limb amputations or severe motor impairments can't
 
 ---
 
+## How to Run
+
+```powershell
+git clone <your-repo-url>
+cd NeuralSight
+pip install -r requirements.txt
+python start.bat
+```
+
+That's it. `start.bat` handles everything: starts the OpenClaude server, runs eye calibration (5s countdown), then launches eye tracking and the Max voice interface.
+
+**Quick commands once running:**
+- Say `"Max"` to activate
+- Say `"Max calibrate eye tracking"` to recalibrate
+- Say `"Max, stop"` to interrupt
+
+---
+
 ## The Vision
 
 ### 1. Zero-Hardware Eyetracking
