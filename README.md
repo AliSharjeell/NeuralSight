@@ -17,6 +17,11 @@ Millions of people with upper limb amputations or severe motor impairments can't
 ```powershell
 git clone <your-repo-url>
 cd NeuralSight
+
+# Setup environment (copy .env.example and add your keys)
+copy .env.example .env
+notepad .env   # Add your GROQ_API_KEY
+
 docker compose up --build
 ```
 
@@ -25,6 +30,11 @@ docker compose up --build
 ```powershell
 git clone <your-repo-url>
 cd NeuralSight
+
+# Setup environment
+copy .env.example .env
+notepad .env   # Add your GROQ_API_KEY
+
 pip install -r requirements.txt
 
 # Build OpenClaude once
