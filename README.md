@@ -32,6 +32,15 @@ That's it. `start.bat` handles everything: starts the OpenClaude server, runs ey
 - Say `"Max calibrate eye tracking"` to recalibrate
 - Say `"Max, stop"` to interrupt
 
+### Docker (optional)
+
+For containerized deployment:
+
+```powershell
+docker build -t neuralsight .
+docker run --device=/dev/video0 -v $(pwd):/app neuralsight
+```
+
 ---
 
 ## The Vision
