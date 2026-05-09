@@ -1,0 +1,16 @@
+services:
+  neuralsight:
+    build: .
+    container_name: neuralsight-max
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL}
+    devices:
+      - /dev/video0:/dev/video0
+    volumes:
+      - .:/app
+    stdin_open: true
+    tty: true
+    network_mode: host
+    command: python voice_terminal_pipeline.py
