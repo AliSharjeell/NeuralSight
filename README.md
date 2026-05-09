@@ -12,6 +12,16 @@ Millions of people with upper limb amputations or severe motor impairments can't
 
 ## How to Run
 
+### Option 1: Docker (Recommended)
+
+```powershell
+git clone <your-repo-url>
+cd NeuralSight
+docker compose up --build
+```
+
+### Option 2: Manual Setup
+
 ```powershell
 git clone <your-repo-url>
 cd NeuralSight
@@ -25,20 +35,12 @@ cd ..
 python start.bat
 ```
 
-That's it. `start.bat` handles everything: starts the OpenClaude server, runs eye calibration (5s countdown), then launches eye tracking and the Max voice interface.
+Docker handles everything automatically. Manual setup gives you more control over each component.
 
 **Quick commands once running:**
 - Say `"Max"` to activate
 - Say `"Max calibrate eye tracking"` to recalibrate
 - Say `"Max, stop"` to interrupt
-
-### Docker (optional)
-
-For containerized deployment:
-
-```powershell
-docker compose up --build
-```
 
 ---
 
