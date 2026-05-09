@@ -18,9 +18,10 @@ Millions of people with upper limb amputations or severe motor impairments can't
 git clone <your-repo-url>
 cd NeuralSight
 copy .env.example .env
-notepad .env   # Add GROQ_API_KEY and ANTHROPIC_API_KEY
+notepad .env   # Add your GROQ_API_KEY and ANTHROPIC_API_KEY
 
 # Full suite (same as start.bat)
+# First build takes ~5-10 min (downloads all dependencies)
 docker compose up --build neuralsight
 
 # Or run individual services:
@@ -37,7 +38,7 @@ cd NeuralSight
 
 # Setup environment
 copy .env.example .env
-notepad .env   # Add GROQ_API_KEY and ANTHROPIC_API_KEY
+notepad .env   # Add your GROQ_API_KEY and ANTHROPIC_API_KEY
 
 pip install -r requirements.txt
 
