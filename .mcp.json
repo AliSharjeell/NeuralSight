@@ -3,6 +3,14 @@
     "windows-mcp": {
       "command": "uvx",
       "args": ["windows-mcp"]
+    },
+    "openclaude": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["openclaude/bin/openclaude"],
+      "env": {
+        "OPENCLAUDE_MODE": "mcp-server"
+      }
     }
   }
 }
